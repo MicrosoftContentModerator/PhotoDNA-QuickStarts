@@ -1,0 +1,25 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2012/06/nuspec.xsd">
+  <metadata>
+    <id>AWSLambda2</id>
+    <version>1.0.0</version>
+    <authors>AWSLambda2</authors>
+    <owners>AWSLambda2</owners>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>Package Description</description>
+    <dependencies>
+      <group targetFramework=".NETCoreApp1.0">
+        <dependency id="Amazon.Lambda.Core" version="1.0.0" exclude="Build,Analyzers" />
+        <dependency id="Microsoft.NETCore.App" version="1.0.5" exclude="Build,Analyzers" />
+        <dependency id="Amazon.Lambda.Serialization.Json" version="1.1.0" exclude="Build,Analyzers" />
+        <dependency id="Amazon.Lambda.S3Events" version="1.0.1" exclude="Build,Analyzers" />
+        <dependency id="AWSSDK.Rekognition" version="3.3.2.1" exclude="Build,Analyzers" />
+        <dependency id="Newtonsoft.Json" version="10.0.1" exclude="Build,Analyzers" />
+        <dependency id="AWSSDK.S3" version="3.3.5.13" exclude="Build,Analyzers" />
+      </group>
+    </dependencies>
+  </metadata>
+  <files>
+    <file src="c:\users\user1\documents\visual studio 2017\Projects\AWSLambda2\AWSLambda2\bin\Debug\netcoreapp1.0\AWSLambda2.dll" target="lib\netcoreapp1.0\AWSLambda2.dll" />
+  </files>
+</package>
