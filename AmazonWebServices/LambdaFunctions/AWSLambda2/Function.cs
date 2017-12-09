@@ -299,16 +299,14 @@ namespace AWSLambda2
 									Charset = "UTF-8",
 									Data = htmlBody +
 										"<br> The bucket the image was uploaded to: " + bucket +
-										"<br> The key of the image in question: " + key +
-										"<br><br> link to image in question: " + url
+										"<br> The key of the image in question: " + key
 								},
 								Text = new Content
 								{
 									Charset = "UTF-8",
 									Data = textBody +
 										"\r\n The bucket the image was uploaded to: " + bucket +
-										"\r\n The key of the image in question: " + key +
-										"\r\n \r\n link to image in question: " + url
+										"\r\n The key of the image in question: " + key
 								}
 							}
 						}
