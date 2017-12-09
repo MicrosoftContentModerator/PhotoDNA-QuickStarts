@@ -51,7 +51,7 @@
                 },
                 "position": {
                     "x": 370,
-                    "y": 180
+                    "y": 190
                 },
                 "z": 1,
                 "embeds": []
@@ -71,8 +71,8 @@
                     "height": 60
                 },
                 "position": {
-                    "x": 200,
-                    "y": 150
+                    "x": 210,
+                    "y": 120
                 },
                 "z": 1,
                 "embeds": []
@@ -156,6 +156,39 @@
                     "id": "68a19d99-8a59-449e-a00b-1be46aa9c69a"
                 },
                 "z": 11
+            },
+            "bd642954-54a0-4563-8bb7-775837564614": {
+                "size": {
+                    "width": 60,
+                    "height": 60
+                },
+                "position": {
+                    "x": 450,
+                    "y": 60
+                },
+                "z": 1,
+                "embeds": [],
+                "isassociatedwith": [
+                    "68a19d99-8a59-449e-a00b-1be46aa9c69a"
+                ],
+                "isrelatedto": [
+                    "b66d1023-fb5d-4fa0-b78a-c32e598cbb5e"
+                ]
+            },
+            "0339ad65-4054-4565-b1a3-39f34c10c1cb": {
+                "size": {
+                    "width": 60,
+                    "height": 60
+                },
+                "position": {
+                    "x": 140,
+                    "y": 50
+                },
+                "z": 1,
+                "embeds": [],
+                "isrelatedto": [
+                    "3119ab73-0c08-486d-b780-a5a66fd4577f"
+                ]
             }
         }
     },
@@ -167,6 +200,9 @@
                     "Variables": {
                         "subscriptionEndpoint": {
                             "Ref": "PhotoDNAEndpoint"
+                        },
+                        "callbackEndpoint": {
+                            "Ref": "CallbackEndpoint"
                         },
                         "subscriptionKey": {
                             "Ref": "PhotoDNAKey"
@@ -256,6 +292,37 @@
                 }
             }
         },
+        "ImageQueuePolicy": {
+            "Type": "AWS::SQS::QueuePolicy",
+            "Properties": {
+                "PolicyDocument": {
+                    "Version": "2012-10-17",
+                    "Id": "QueuePolicy",
+                    "Statement": [
+                        {
+                            "Sid": "1",
+                            "Effect": "Allow",
+                            "Principal": {
+                                "AWS": [
+                                    "*"
+                                ]
+                            },
+                            "Action": [
+                                "sqs:SendMessage",
+                                "sqs:ReceiveMessage"
+                            ],
+                            "Resource": "*"
+                        }
+                    ]
+                },
+                "Queues": [{"Ref": "ImageQueue"}]
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "0339ad65-4054-4565-b1a3-39f34c10c1cb"
+                }
+            }
+        },
         "ScanScheduler": {
             "Type": "AWS::Events::Rule",
             "Properties": {
@@ -281,6 +348,30 @@
             "DependsOn": [
                 "PDNAMonitoring"
             ]
+        },
+        "InvokeLambdaPermission": {
+            "Type": "AWS::Lambda::Permission",
+            "Properties": {
+                "FunctionName": {
+                    "Fn::GetAtt": [
+                        "PDNAMonitoring",
+                        "Arn"
+                    ]
+                },
+                "Action": "lambda:InvokeFunction",
+                "Principal": "events.amazonaws.com",
+                "SourceArn": {
+                    "Fn::GetAtt": [
+                        "ScanScheduler",
+                        "Arn"
+                    ]
+                }
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "bd642954-54a0-4563-8bb7-775837564614"
+                }
+            }
         }
     },
     "Outputs": {

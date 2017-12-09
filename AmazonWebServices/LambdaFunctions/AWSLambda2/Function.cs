@@ -42,10 +42,10 @@ namespace AWSLambda2
 		//private string emailAddress = "jnnortz@gmail.com"; //notification receiver
 		// This address must be verified with Amazon SES. It will be the address used to send the emails
 		//private string senderAddress = "jnnortz@gmail.com";
+		//public string myQueueURL = "https://sqs.us-west-2.amazonaws.com/249673612814/testqueue"; 
 
 		IAmazonS3 S3Client { get; }
 
-		//public string myQueueURL = "https://sqs.us-west-2.amazonaws.com/249673612814/testqueue"; 
 
 		float MinConfidence { get; set; } = DEFAULT_MIN_CONFIDENCE;
 
@@ -82,25 +82,7 @@ namespace AWSLambda2
 		{
 			Console.WriteLine($"Function initiated");
 			this.S3Client = new AmazonS3Client();
-
 			var environmentMinConfidence = System.Environment.GetEnvironmentVariable(MIN_CONFIDENCE_ENVIRONMENT_VARIABLE_NAME);
-			if (!string.IsNullOrWhiteSpace(environmentMinConfidence))
-			{
-				float value;
-				if (float.TryParse(environmentMinConfidence, out value))
-				{
-					this.MinConfidence = value;
-					Console.WriteLine($"Setting minimum confidence to {this.MinConfidence}");
-				}
-				else
-				{
-					Console.WriteLine($"Failed to parse value {environmentMinConfidence} for minimum confidence. Reverting back to default of {this.MinConfidence}");
-				}
-			}
-			else
-			{
-				Console.WriteLine($"Using default minimum confidence of {this.MinConfidence}");
-			}
 		}
 
 		/// <summary>
@@ -115,8 +97,13 @@ namespace AWSLambda2
 			this.MinConfidence = minConfidence;
 		}
 
+		const int SqsPullBatchSize = 10;
+		const int SqsPullWaitTime = 20;
+
+		// TODO: Enclose each method in a generic exception catcher (Exception ex), log the messages and gracefully recover
+
 		/// <summary>
-		/// A function for responding to S3 create events. it will send image file URLs to PDNAs service and get results. On hits this function will email the given address with a notification
+		/// Listener lambda that is called on a schedule. it will check SQS for messages, retried them and send image file URLs to PDNAs service and get results. On hits this function will email the given address with a notification
 		/// </summary>
 		/// <param name="input"></param>
 		/// <param name="context"></param>
@@ -128,96 +115,152 @@ namespace AWSLambda2
 			{
 				ReceiveMessageRequest receiveMessageRequest = new ReceiveMessageRequest();
 				Amazon.SQS.AmazonSQSClient amazonSQSClient = new Amazon.SQS.AmazonSQSClient();
-				receiveMessageRequest.QueueUrl = System.Environment.GetEnvironmentVariable("sourceQueueURL");
-				receiveMessageRequest.MaxNumberOfMessages = 10;
-				receiveMessageRequest.WaitTimeSeconds = 20;
-				ReceiveMessageResponse receiveMessageResponse = await amazonSQSClient.ReceiveMessageAsync(receiveMessageRequest);
+				ReceiveMessageResponse receiveMessageResponse = new ReceiveMessageResponse();
+				try
+				{
+					receiveMessageRequest.QueueUrl = System.Environment.GetEnvironmentVariable("sourceQueueURL");
+					receiveMessageRequest.MaxNumberOfMessages = SqsPullBatchSize;
+					receiveMessageRequest.WaitTimeSeconds = SqsPullWaitTime;
+					receiveMessageResponse = await amazonSQSClient.ReceiveMessageAsync(receiveMessageRequest);
+				}
+				catch (Exception ex)
+				{
+					Console.WriteLine("An error occured while receiving amazon account and queue location: " + ex.Message);
+				}
 
 				Console.WriteLine(" ----  STARTING query WITH: " + receiveMessageResponse.Messages.Count + " messages in the SQS");
 
 				int c = receiveMessageResponse.Messages.Count;
 				if (c == 0)
 				{
-					Console.WriteLine("[:.: :] ending with empty queue");
+					Console.WriteLine("[:.:':.:] ending with empty queue");
 					return;
 				}
 				// TODO: break up messages into groups of 5 for prehashing
-				if (c > 5) c = 5;
 				for (int i = 0; i < c; i++)
 				{
-					dynamic body = JsonConvert.DeserializeObject(receiveMessageResponse.Messages[i].Body);
-					string bucket = body.Records[0].s3.bucket.name;
-					string key = body.Records[0].s3["object"].key;
-					if (!SupportedImageTypes.Contains(Path.GetExtension(key)))
+					try
 					{
-						Console.WriteLine($"Object {bucket}:{key} is not a supported image type");
-						continue;
+						dynamic body = JsonConvert.DeserializeObject(receiveMessageResponse.Messages[i].Body);
+						string bucket = body.Records[0].s3.bucket.name;
+						string key = body.Records[0].s3["object"].key;
+						if (!SupportedImageTypes.Contains(Path.GetExtension(key)))
+						{
+							Console.WriteLine($"Object {body.Records[0].s3.bucket.name}:{body.Records[0].s3.bucket.key} is not a supported image type");
+							await amazonSQSClient.DeleteMessageAsync(System.Environment.GetEnvironmentVariable("sourceQueueURL"), receiveMessageResponse.Messages[i].ReceiptHandle);
+							continue;
+						}
+
+						//Console.WriteLine($"sending image from {input.Records[0].S3.Bucket.Name}:{input.Records[0].S3.Object.Key}");
+						string url = BuildObjectUrl(bucket, key);
+
+						MakeRequest(url, bucket, key, receiveMessageResponse.Messages[i].ReceiptHandle, amazonSQSClient);
 					}
-					//Console.WriteLine($"sending image from {input.Records[0].S3.Bucket.Name}:{input.Records[0].S3.Object.Key}");
-
-					GetObjectRequest objLocation = new GetObjectRequest
+					catch (Exception ex)
 					{
-						BucketName = bucket,
-						Key = key
-					};
-					GetPreSignedUrlRequest expiryUrlRequest = new GetPreSignedUrlRequest
-					{
-						BucketName = (bucket),
-						Key = (key),
-						Expires = (DateTime.Now.AddDays(1))
-					};
-					string url = S3Client.GetPreSignedURL(expiryUrlRequest);
+						Console.WriteLine("An Exception was thrown attempting to build message body (bad message format), Removing from the message queue: " + ex.Message);
+						await amazonSQSClient.DeleteMessageAsync(System.Environment.GetEnvironmentVariable("sourceQueueURL"), receiveMessageResponse.Messages[i].ReceiptHandle);
+					}
 
-					HttpResponseMessage response = new HttpResponseMessage();
-					response = await MakeRequest(url, bucket, key);
-
-					await amazonSQSClient.DeleteMessageAsync(System.Environment.GetEnvironmentVariable("sourceQueueURL"), receiveMessageResponse.Messages[i].ReceiptHandle);
+					// sleep not require because of other execution times, but just in case, sleep for 1/10 second to
+					// comply with the PDNA throttling
+					System.Threading.Thread.Sleep(100);
 				}
-				System.Threading.Thread.Sleep(100);
-
 			}
-			
 		}
 
-		public async Task<HttpResponseMessage> MakeRequest(string objectUrl, string bucket, string key)
+		public string BuildObjectUrl(string bucket, string key)
 		{
-			var client = new HttpClient();
+			GetObjectRequest objLocation = new GetObjectRequest
+			{
+				BucketName = bucket,
+				Key = key
+			};
+			GetPreSignedUrlRequest expiryUrlRequest = new GetPreSignedUrlRequest
+			{
+				BucketName = (bucket),
+				Key = (key),
+				Expires = (DateTime.Now.AddDays(1))
+			};
+			return S3Client.GetPreSignedURL(expiryUrlRequest);
+		}
 
-			Console.WriteLine("  --  Making PDNA Request for image: " + key + ", from bucket: " + bucket + "Sending to sendpoint: :" + System.Environment.GetEnvironmentVariable("PhotoDNAEndpoint"));
-			// Request headers
-			client.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", System.Environment.GetEnvironmentVariable("subscriptionKey"));
-			//client.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", "884a6e4f5cc74558a32d5c759dd43e70");
+		public async void MakeRequest(string objectUrl, string bucket, string key, string receiptHandle, Amazon.SQS.AmazonSQSClient amazonSQSClient)
+		{
+			try
+			{
+				var client = new HttpClient();
 
-			// Request parameters
-			var uri = System.Environment.GetEnvironmentVariable("subscriptionEndpoint");
+				Console.WriteLine("    ----  Making PDNA Request for image: " + key + ", from bucket: " + bucket + "Sending to endpoint: :" + System.Environment.GetEnvironmentVariable("subscriptionEndpoint"));
+				// Request headers
+				client.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", System.Environment.GetEnvironmentVariable("subscriptionKey"));
+				//client.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", "884a6e4f5cc74558a32d5c759dd43e70");
+
+				// Request parameters
+				var uri = System.Environment.GetEnvironmentVariable("subscriptionEndpoint");
 			
-			HttpResponseMessage response;
-			string contents = "";
+				HttpResponseMessage response;
+				string contents = "";
 
-			// Request body
-			var body = new URLObject();
-			body.value = objectUrl;
-			string json = JsonConvert.SerializeObject(body);
-			//Console.Write("Sending json: " + json + "To Key: " + System.Environment.GetEnvironmentVariable("subscriptionKey"));
-			byte[] byteData = Encoding.UTF8.GetBytes(json);
+				// Request body
+				var body = new URLObject();
+				body.value = objectUrl;
+				string json = JsonConvert.SerializeObject(body);
+				//Console.Write("Sending json: " + json + "To Key: " + System.Environment.GetEnvironmentVariable("subscriptionKey"));
+				byte[] byteData = Encoding.UTF8.GetBytes(json);
 
-			using (var content = new ByteArrayContent(byteData))
+				try
+				{
+					using (var content = new ByteArrayContent(byteData))
+					{
+						// post json
+						content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
+						response = await client.PostAsync(uri, content);
+
+						// get response as string
+						contents = await response.Content.ReadAsStringAsync();
+					}
+
+					// process response
+					dynamic obj = JsonConvert.DeserializeObject(contents);
+					var emailResponse = new SendEmailResponse();
+					if (obj.IsMatch == "True")
+					{
+						Console.Write("!!  ...FOUND MATCH... ");
+						emailResponse = await MailNotification(bucket, key, objectUrl);
+					}
+					else
+					{
+						Console.WriteLine("...NO MATCH FOUND...");
+					}
+
+					await amazonSQSClient.DeleteMessageAsync(System.Environment.GetEnvironmentVariable("sourceQueueURL"), receiptHandle);
+				}
+				catch (Exception ex)
+				{
+					// TODO log exception always
+					Console.WriteLine("And Error was thrown trying to send Json to the PDNA subscription endpoint: " + System.Environment.GetEnvironmentVariable("subscriptionEndpoint") + ex.Message);
+
+					if (System.Environment.GetEnvironmentVariable("callbackEndpoint") != null || System.Environment.GetEnvironmentVariable("callbackEndpoint") != String.Empty)
+					{
+						uri = System.Environment.GetEnvironmentVariable("callbackEndpoint");
+
+						contents += "<br> /r/n An Exception was thrown attempting to send the above Json to " + System.Environment.GetEnvironmentVariable("callbackEndpoint") + "  Exception:  " + ex.Message;
+
+						using (var content = new ByteArrayContent(byteData))
+						{
+							content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
+							response = await client.PostAsync(uri, content);
+							contents = await response.Content.ReadAsStringAsync();
+						}
+					}
+				}
+			}
+			catch (Exception ex)
 			{
-				content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
-				response = await client.PostAsync(uri, content);
-				contents = await response.Content.ReadAsStringAsync();
+				Console.Write(" An error has occured while attempting to send the image request to PDNA, Exception:  " + ex.Message);
 			}
 
-			dynamic obj = JsonConvert.DeserializeObject(contents);
-			Console.WriteLine("| | | | Exit Request, Found Match?? : " + obj.IsMatch);
-			var emailResponse = new SendEmailResponse();
-			if (obj.IsMatch == "True")
-			{
-				Console.Write("!!  ...FOUND MATCH... ");
-				emailResponse = await MailNotification(bucket, key, objectUrl);
-			}
-
-			return response;
 		}
 
 		public class URLObject
@@ -228,61 +271,74 @@ namespace AWSLambda2
 
 		private async Task<SendEmailResponse> MailNotification(string bucket, string key, string url)
 		{
-			Console.Write("... FOUND MATCH: Attempting to send email for: " + bucket + " " + key);
-			var response = new SendEmailResponse();
-			// Replace USWest2 with the AWS Region you're using for Amazon SES.
-			// Acceptable values are EUWest1, USEast1, and USWest2.
-			using (var client = new AmazonSimpleEmailServiceClient(RegionEndpoint.USWest2))
+			try
 			{
-				var sendRequest = new SendEmailRequest
+				Console.Write("... FOUND MATCH: Attempting to send email for: " + bucket + " " + key);
+				var response = new SendEmailResponse();
+				// Replace USWest2 with the AWS Region you're using for Amazon SES.
+				// Acceptable values are EUWest1, USEast1, and USWest2.
+				using (var client = new AmazonSimpleEmailServiceClient(RegionEndpoint.USWest2))
 				{
-					Source = System.Environment.GetEnvironmentVariable("senderAddress"),
-					//Source = "jnnortz@gmail.com",
-					Destination = new Destination
+					var sendRequest = new SendEmailRequest
 					{
-						ToAddresses =
-						new List<string> { System.Environment.GetEnvironmentVariable("emailAddress") }
-						//new List<string> { "jnnortz@gmail.com" }
-					},
-					Message = new Amazon.SimpleEmail.Model.Message
-					{
-						Subject = new Content(subject),
-						Body = new Body
+						Source = System.Environment.GetEnvironmentVariable("senderAddress"),
+						//Source = "jnnortz@gmail.com",
+						Destination = new Destination
 						{
-							Html = new Content
+							ToAddresses =
+							new List<string> { System.Environment.GetEnvironmentVariable("emailAddress") }
+							//new List<string> { "jnnortz@gmail.com" }
+						},
+						Message = new Amazon.SimpleEmail.Model.Message
+						{
+							Subject = new Content(subject),
+							Body = new Body
 							{
-								Charset = "UTF-8",
-								Data = htmlBody +
-									"<br> The bucket the image was uploaded to: " + bucket +
-									"<br> The key of the image in question: " + key +
-									"<br><br> link to image in question: " + url
-							},
-							Text = new Content
-							{
-								Charset = "UTF-8",
-								Data = textBody +
-									"\r\n The bucket the image was uploaded to: " + bucket +
-									"\r\n The key of the image in question: " + key +
-									"\r\n \r\n link to image in question: " + url
+								Html = new Content
+								{
+									Charset = "UTF-8",
+									Data = htmlBody +
+										"<br> The bucket the image was uploaded to: " + bucket +
+										"<br> The key of the image in question: " + key +
+										"<br><br> link to image in question: " + url
+								},
+								Text = new Content
+								{
+									Charset = "UTF-8",
+									Data = textBody +
+										"\r\n The bucket the image was uploaded to: " + bucket +
+										"\r\n The key of the image in question: " + key +
+										"\r\n \r\n link to image in question: " + url
+								}
 							}
 						}
+					};
+					Console.WriteLine("Finished Building sendRequest");
+					try
+					{
+						Console.WriteLine("Sending email using Amazon SES...");
+						response = await client.SendEmailAsync(sendRequest);
+						Console.WriteLine("The email was sent successfully. ");
 					}
-				};
-				Console.WriteLine("Finished Building sendRequest");
-				try
-				{
-					Console.WriteLine("Sending email using Amazon SES...");
-					response = await client.SendEmailAsync(sendRequest);
-					Console.WriteLine("The email was sent successfully. ");
+					catch (Exception ex)
+					{
+						Console.WriteLine("The email was not sent.");
+						Console.WriteLine("Error message: " + ex.Message);
+					}
 				}
-				catch (Exception ex)
-				{
-					Console.WriteLine("The email was not sent.");
-					Console.WriteLine("Error message: " + ex.Message);
-				}
+
+				return response;
+			}
+			catch(Exception ex)
+			{
+				var response = new SendEmailResponse();
+
+				Console.WriteLine("The email was not sent.");
+				Console.WriteLine("Error message: " + ex.Message);
+
+				return response;
 			}
 
-			return response;
 		}
 		
 	}
