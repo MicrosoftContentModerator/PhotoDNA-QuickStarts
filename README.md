@@ -4,6 +4,15 @@
 This document will guide you through the steps to set up Photo DNA Monitoring for your own existing S3 buckets.
 Before you start, visit [the Photo DNA home page](https://myphotodna.microsoftmoderator.com/) and create a subscription.
 
+Photo DNA's Quick Start Stack is a CloudFormation stack that will build a number of pieces of cloud architecture in your Amazon Web Services account. This architecture will log all new images uploaded to designated buckets within your AWS account and send them to Photo DNA's scanning architecture periodically. If any image is flagged by Photo DNA for inappropriate content, you will be contacted via email with information about the image in question.
+
+The following is a diagram of the architecture that will be created by this stack:
+
+![](https://s3-us-west-2.amazonaws.com/allyislambdafunctionsbucket/SimpleArchDiagram.png)
+
+This stack will create a number of elements, with respective IAM Roles, that will monitor image uploads. It will create a Simple CloudWatch Alarm that will trigger every 5 minutes, which will call a Builder Lambda Function. The Builder Lambda Function will call a Simple Queue Services, which is also created by the Stack. The Queue gets messages whenever an image is uploaded to one of your S3 Buckets, and when the Builder Lambda calls the Queue it sends links to each of those images to the Builder Lambda. The Builder than process each image and builds a worker Lambda for each image it pulled from the Queue. The worker, comprises a message with the image and sends it to Photo DNAs site where it is scanned for inappropriate content. The result is then sent back to the Worker Lambda where it is logged, and if there was a hit, emails you letting you know what image or images are potentially dangerous.
+
+
 **1)**	Click ![https://console.aws.amazon.com/cloudformation/home?region=us-west-2#/stacks/new?stackName=PhotoDNAMonitorStackTempalte&templateURL=https://s3-us-west-2.amazonaws.com/allyislambdafunctionsbucket/PhotoDNAMonitorStackTemplate.template](https://dmhnzl5mp9mj6.cloudfront.net/application-management_awsblog/images/cloudformation-launch-stack.png) to be navigated to your AWS accounts CloudFormation page using our CloudFormation Template. You will be navigate automatically to this page once you have logged in:
 ![](https://s3-us-west-2.amazonaws.com/allyislambdafunctionsbucket/AWSLandingPage.PNG)
 Nothing needs to be done on this page, the URL for the CloudFormation Stack will be automatically populated into the appropriate field. Click **Next** to continue
@@ -20,7 +29,9 @@ Nothing needs to be done on this page, the URL for the CloudFormation Stack will
 
 **3)**	On Options page, click **Next**
  ![](https://s3-us-west-2.amazonaws.com/allyislambdafunctionsbucket/AWSSecondPageCapture.PNG)
-The options page contains a number of parameters that can change how the stack is deployed to your AWS account. It allows you to add tags to the different architecture created in the stack, change what permissions the stack is given during creation or limit who can access the stacks elements. Do not edit this page unless you know how it will effect the deployment of the stack
+The options page contains a number of parameters that can change how the stack is deployed to your AWS account, **Don't worry about these** unless you are sure you'll know how they will effect the Stacks creation and just click **Next**. 
+
+These options allows you to add **Tags** to the different architecture created in the stack, change how the stack creation is logged or monitored, and change what **permissions** the stack is given during creation or limit who can access the stacks elements: **IAM** roles are used to determine what the Stack is allowed to do within your Amazon account, however the stack itself already has basic roles built in. Do not edit this page unless you know how it will effect the deployment of the stack. In the **Advanced** options expandable panel, notifications options will subscribe the stack to Notification topics that will send notifications whenever the Stack completes a step of its process or run into an error. This isn't a particularly large stack so notifications shouldn't be necessary. Termination **Protection**, **Timeout**, and **Rollback** are options for stack creation and won't effect the stack after its completed. the **Policy** option is one more way of limiting what actions the stack can execute during its construction. Don't worry about these options unless you are well versed with Amazons Web Services.
 
 **4)**	On Review, double-check the parameters and other options selected during the process above. Then acknowledge the terms and click **‘Create,’** your stack will then be created.
 
