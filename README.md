@@ -17,7 +17,7 @@ This stack will create a number of elements, with respective IAM Roles, that wil
 ![](https://s3-us-west-2.amazonaws.com/allyislambdafunctionsbucket/AWSLandingPage.PNG)
 Nothing needs to be done on this page, the URL for the CloudFormation Stack will be automatically populated into the appropriate field. Click **Next** to continue
 
-**2)**	On the first fill out the following fields:  
+**2)**	On the first page, fill out the following fields:  
 ![](https://s3-us-west-2.amazonaws.com/allyislambdafunctionsbucket/AWSFirstPageCapture.PNG)
 
 - The **Stack name** will auto-populate, but can be changed to users preference.
@@ -27,13 +27,13 @@ Nothing needs to be done on this page, the URL for the CloudFormation Stack will
 - **Photo DNA Key** is the subscription-specific key used to identify your subscription. To find your personal PDNA key [visit this page](https://testpdnaui.azurewebsites.net/ ) 
 - For **Sender Email** field, the email must be verified by your AWS account, [visit this page for instructions](https://us-west-2.console.aws.amazon.com/ses/home?region=us-west-2#verified-senders-email ) 
 
-**3)**	On Options page, click **Next**
+**3)**	On the Options page, click **Next**
  ![](https://s3-us-west-2.amazonaws.com/allyislambdafunctionsbucket/AWSSecondPageCapture.PNG)
 The options page contains a number of parameters that can change how the stack is deployed to your AWS account, **Don't worry about these** unless you are sure you'll know how they will effect the Stacks creation and just click **Next**. 
 
 These options allows you to add **Tags** to the different architecture created in the stack, change how the stack creation is logged or monitored, and change what **permissions** the stack is given during creation or limit who can access the stacks elements: **IAM** roles are used to determine what the Stack is allowed to do within your Amazon account, however the stack itself already has basic roles built in. Do not edit this page unless you know how it will effect the deployment of the stack. In the **Advanced** options expandable panel, notifications options will subscribe the stack to Notification topics that will send notifications whenever the Stack completes a step of its process or run into an error. This isn't a particularly large stack so notifications shouldn't be necessary. Termination **Protection**, **Timeout**, and **Rollback** are options for stack creation and won't effect the stack after its completed. the **Policy** option is one more way of limiting what actions the stack can execute during its construction. Don't worry about these options unless you are well versed with Amazons Web Services.
 
-**4)**	On Review, double-check the parameters and other options selected during the process above. Then acknowledge the terms and click **‘Create,’** your stack will then be created.
+**4)**	On the Review page, double-check the parameters and other options selected during the process above. Then acknowledge the terms and click **‘Create,’** your stack will then be created.
 
 **5)**	Once the stack has finished (this may take several minutes), navigate to your [Amazon S3 management page](https://s3.console.aws.amazon.com/s3) and select any bucket you want monitored by PDNA
 
