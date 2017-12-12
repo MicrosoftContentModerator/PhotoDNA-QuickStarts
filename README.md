@@ -13,7 +13,7 @@ The following is a diagram of the architecture that will be created by this stac
 This stack will create a number of elements, with respective IAM Roles, that will monitor image uploads. It will create a Simple CloudWatch Alarm that will trigger every 5 minutes, which will call a Builder Lambda Function. The Builder Lambda Function will call a Simple Queue Services, which is also created by the Stack. The Queue gets messages whenever an image is uploaded to one of your S3 Buckets, and when the Builder Lambda calls the Queue it sends links to each of those images to the Builder Lambda. The Builder than process each image and builds a worker Lambda for each image it pulled from the Queue. The worker, comprises a message with the image and sends it to Photo DNAs site where it is scanned for inappropriate content. The result is then sent back to the Worker Lambda where it is logged, and if there was a hit, emails you letting you know what image or images are potentially dangerous.
 
 
-**1)**	Click ![https://console.aws.amazon.com/cloudformation/home?region=us-west-2#/stacks/new?stackName=S3MonitorStack&templateURL=https://s3-us-west-2.amazonaws.com/allyislambdafunctionsbucket/PhotoDNAMonitorStackTemplate.template](https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png) to be navigated to your AWS accounts CloudFormation page using our CloudFormation Template. You will be navigate automatically to this page once you have logged in:
+**1)**	Click [Here](https://console.aws.amazon.com/cloudformation/home?region=us-west-2#/stacks/new?stackName=S3MonitorStack&templateURL=https://s3-us-west-2.amazonaws.com/allyislambdafunctionsbucket/PhotoDNAMonitorStackTemplate.template) to be navigated to your AWS accounts CloudFormation page using our CloudFormation Template. You will be navigate automatically to this page once you have logged in:
 ![](https://s3-us-west-2.amazonaws.com/allyislambdafunctionsbucket/AWSLandingPage.PNG)
 Nothing needs to be done on this page, the URL for the CloudFormation Stack will be automatically populated into the appropriate field. Click **Next** to continue
 
@@ -49,4 +49,4 @@ These options allows you to add **Tags** to the different architecture created i
 - Select the **Simple Queue Name** created by the stack.
 
 **8)**	Select **Save**
-Your bucket is now ready to be monitored by PDNA, repeat steps 6-8 for each bucket you want monitored by PDNAs services. 
+Your bucket is now ready to be monitored by PDNA. To add additional buckets to be monitored: repeat steps 6-8 for each bucket you want monitored by PDNAs services. 
