@@ -59,14 +59,14 @@ namespace AWSLambda2
 		static readonly string textBody = "Amazon SES Test (.NET)\r\n"
 										+ "This email was sent through Amazon SES "
 										+ "using the AWS SDK for .NET."
-										+ "An Image was uploaded to one of your S3 buckets which was flagged by PhotoDNA for its content:";
+										+ "An Image was uploaded to one of your S3 buckets which was flagged by PhotoDNA for its content. visit https://us-west-2.console.aws.amazon.com/cloudwatch/home?region=us-west-2#logs: for logs";
 
 		// The HTML body of the email.
 		static readonly string htmlBody = @"<html>
 											<head></head>
 											<body>
 												<h1>WARNING</h1>
-												<p>An Image was uploaded to one of your S3 buckets which was flagged by PhotoDNA for its content:</p>
+												<p>An Image was uploaded to one of your S3 buckets which was flagged by PhotoDNA for its content. visit https://us-west-2.console.aws.amazon.com/cloudwatch/home?region=us-west-2#logs: for logs</p>
 												<br>";
 		static readonly string htmlBodyEndCap =  @"</body>
 												</html>";
@@ -226,12 +226,12 @@ namespace AWSLambda2
 					var emailResponse = new SendEmailResponse();
 					if (obj.IsMatch == "True")
 					{
-						Console.Write("!!  ...FOUND MATCH... ");
+						Console.Write("!!  ----  ----  FOUND MATCH for img: " + key + " in bucket: " + bucket);
 						emailResponse = await MailNotification(bucket, key, objectUrl);
 					}
 					else
 					{
-						Console.WriteLine("...NO MATCH FOUND...");
+						Console.WriteLine("..  ----  ----  NO MATCH FOUND for img: " + key + " in bucket: " + bucket);
 					}
 
 					await amazonSQSClient.DeleteMessageAsync(System.Environment.GetEnvironmentVariable("sourceQueueURL"), receiptHandle);
@@ -273,7 +273,7 @@ namespace AWSLambda2
 		{
 			try
 			{
-				Console.Write("... FOUND MATCH: Attempting to send email for: " + bucket + " " + key);
+				Console.Write("!!  ----  ----  ---- FOUND MATCH: Attempting to send email for: " + bucket + " " + key);
 				var response = new SendEmailResponse();
 				// Replace USWest2 with the AWS Region you're using for Amazon SES.
 				// Acceptable values are EUWest1, USEast1, and USWest2.
@@ -314,14 +314,14 @@ namespace AWSLambda2
 					Console.WriteLine("Finished Building sendRequest");
 					try
 					{
-						Console.WriteLine("Sending email using Amazon SES...");
+						Console.WriteLine("!!  ----  ----  ---- Sending email using Amazon SES...");
 						response = await client.SendEmailAsync(sendRequest);
-						Console.WriteLine("The email was sent successfully. ");
+						Console.WriteLine("!!  ----  ----  ---- The email was sent successfully. ");
 					}
 					catch (Exception ex)
 					{
-						Console.WriteLine("The email was not sent.");
-						Console.WriteLine("Error message: " + ex.Message);
+						Console.WriteLine("!!  ERROR ----  ---- The email was not sent.");
+						Console.WriteLine("!!  ERROR ----  ---- Error message: " + ex.Message);
 					}
 				}
 
