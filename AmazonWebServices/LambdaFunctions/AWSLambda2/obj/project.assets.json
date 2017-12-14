@@ -7553,10 +7553,10 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\user1\\documents\\visual studio 2017\\Projects\\AWSLambda2\\AWSLambda2\\AWSLambda2.csproj",
+      "projectUniqueName": "C:\\Users\\user1\\Documents\\PhotoDNA-QuickStarts\\AmazonWebServices\\LambdaFunctions\\AWSLambda2\\AWSLambda2.csproj",
       "projectName": "AWSLambda2",
-      "projectPath": "C:\\Users\\user1\\documents\\visual studio 2017\\Projects\\AWSLambda2\\AWSLambda2\\AWSLambda2.csproj",
-      "outputPath": "C:\\Users\\user1\\documents\\visual studio 2017\\Projects\\AWSLambda2\\AWSLambda2\\obj\\",
+      "projectPath": "C:\\Users\\user1\\Documents\\PhotoDNA-QuickStarts\\AmazonWebServices\\LambdaFunctions\\AWSLambda2\\AWSLambda2.csproj",
+      "outputPath": "C:\\Users\\user1\\Documents\\PhotoDNA-QuickStarts\\AmazonWebServices\\LambdaFunctions\\AWSLambda2\\obj\\",
       "projectStyle": "PackageReference",
       "originalTargetFrameworks": [
         "netcoreapp1.0"
