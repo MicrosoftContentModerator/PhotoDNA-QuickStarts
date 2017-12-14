@@ -1,7 +1,0 @@
-c:\users\user1\documents\visual studio 2017\Projects\AWSLambda2\AWSLambda2\bin\Release\netcoreapp1.0\AWSLambda2.deps.json
-c:\users\user1\documents\visual studio 2017\Projects\AWSLambda2\AWSLambda2\bin\Release\netcoreapp1.0\AWSLambda2.dll
-c:\users\user1\documents\visual studio 2017\Projects\AWSLambda2\AWSLambda2\bin\Release\netcoreapp1.0\AWSLambda2.pdb
-c:\users\user1\documents\visual studio 2017\Projects\AWSLambda2\AWSLambda2\obj\Release\netcoreapp1.0\AWSLambda2.AssemblyInfo.cs
-c:\users\user1\documents\visual studio 2017\Projects\AWSLambda2\AWSLambda2\obj\Release\netcoreapp1.0\AWSLambda2.dll
-c:\users\user1\documents\visual studio 2017\Projects\AWSLambda2\AWSLambda2\obj\Release\netcoreapp1.0\AWSLambda2.pdb
-c:\users\user1\documents\visual studio 2017\Projects\AWSLambda2\AWSLambda2\obj\Release\netcoreapp1.0\AWSLambda2.csprojResolveAssemblyReference.cache
