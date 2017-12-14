@@ -183,18 +183,23 @@ namespace AWSLambda2
 					else
 					{
 						Console.WriteLine(".!!  ----  ----  ERROR for img: " + key + " in bucket: " + bucket);
+						string err = (" .. the proper response was not found" + obj);
+						await MailNotificationError(bucket, key, objectUrl, err);
 						throw new Exception(" .. the proper response was not found" + obj);
 					}
 				}
 				catch (Exception ex)
 				{
+					string err = ("And Error was thrown trying to send Json to the PDNA subscription endpoint: " + ex.Message);
+					await MailNotificationError(bucket, key, objectUrl, err);
 					Console.WriteLine("And Error was thrown trying to send Json to the PDNA subscription endpoint: " + ex.Message);
-
 				}
 
 			}
 			catch (Exception ex)
 			{
+				string err = (" An error has occured while attempting to send the image request to PDNA, Exception:  " + ex.Message);
+				await MailNotificationError(bucket, key, objectUrl, err);
 				Console.Write(" An error has occured while attempting to send the image request to PDNA, Exception:  " + ex.Message);
 			}
 
@@ -254,6 +259,76 @@ namespace AWSLambda2
 						Console.WriteLine("!!  ----  ----  ---- Sending email using Amazon SES...");
 						response = await client.SendEmailAsync(sendRequest);
 						Console.WriteLine("!!  ----  ----  ---- The email was sent successfully. ");
+					}
+					catch (Exception ex)
+					{
+						Console.WriteLine("!!  ERROR ----  ---- The email was not sent.");
+						Console.WriteLine("!!  ERROR ----  ---- Error message: " + ex.Message);
+					}
+				}
+
+				return response;
+			}
+			catch (Exception ex)
+			{
+				var response = new SendEmailResponse();
+
+				Console.WriteLine("The email was not sent.");
+				Console.WriteLine("Error message: " + ex.Message);
+
+				return response;
+			}
+
+		}
+
+		private async Task<SendEmailResponse> MailNotificationError(string bucket, string key, string url, string error)
+		{
+			try
+			{
+				Console.Write("!!  ----  ----  ---- FOUND ERROR: Attempting to send email for: " + bucket + " " + key);
+				var response = new SendEmailResponse();
+				// Replace USWest2 with the AWS Region you're using for Amazon SES.
+				// Acceptable values are EUWest1, USEast1, and USWest2.
+				using (var client = new AmazonSimpleEmailServiceClient(RegionEndpoint.USWest2))
+				{
+					var sendRequest = new SendEmailRequest
+					{
+						Source = System.Environment.GetEnvironmentVariable("senderAddress"),
+						//Source = senderAddress,
+						Destination = new Destination
+						{
+							ToAddresses =
+							new List<string> { System.Environment.GetEnvironmentVariable("emailAddress") }
+							//new List<string> { emailAddress }
+						},
+						Message = new Amazon.SimpleEmail.Model.Message
+						{
+							Subject = new Content(subject),
+							Body = new Body
+							{
+								Html = new Content
+								{
+									Charset = "UTF-8",
+									Data = htmlBody +
+										"<br> The bucket the image was uploaded to: " + bucket +
+										"<br> The key of the image in question: " + key + htmlBodyEndCap
+								},
+								Text = new Content
+								{
+									Charset = "UTF-8",
+									Data = textBody +
+										"\r\n The bucket the image was uploaded to: " + bucket +
+										"\r\n The key of the image in question: " + key
+								}
+							}
+						}
+					};
+					Console.WriteLine("Finished Building sendRequest");
+					try
+					{
+						Console.WriteLine("!!  ERROR ----  ---- Sending Error email using Amazon SES...");
+						response = await client.SendEmailAsync(sendRequest);
+						Console.WriteLine("!!  ERROR ----  ---- The Error email was sent successfully. ");
 					}
 					catch (Exception ex)
 					{
