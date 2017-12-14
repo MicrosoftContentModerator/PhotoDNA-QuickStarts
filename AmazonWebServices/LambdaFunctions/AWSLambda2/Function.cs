@@ -34,13 +34,7 @@ namespace AWSLambda2
 		/// </summary>
 		public const string MIN_CONFIDENCE_ENVIRONMENT_VARIABLE_NAME = "MinConfidence";
 
-		private string subscriptionKey = "129de238170341dbb0a635fabfdf0bc5";
-		private string subscriptionEndpoint = "https://api.microsoftmoderator.com/photodna/v1.0/Match";
-		private string emailAddress = "jnnortz@gmail.com"; //notification receiver
-														   // This address must be verified with Amazon SES. It will be the address used to send the emails
-		private string senderAddress = "jnnortz@gmail.com";
-		//public string myQueueURL = "https://sqs.us-west-2.amazonaws.com/249673612814/testqueue"; 
-
+		
 		IAmazonS3 S3Client { get; }
 
 
@@ -137,14 +131,14 @@ namespace AWSLambda2
 			{
 				var client = new HttpClient();
 
-				Console.WriteLine("    ----  Making PDNA Request for image: " + key + ", from bucket: " + bucket + "Sending to endpoint: " + /*System.Environment.GetEnvironmentVariable("subscriptionEndpoint")*/ subscriptionEndpoint);
+				Console.WriteLine("    ----  Making PDNA Request for image: " + key + ", from bucket: " + bucket + "Sending to endpoint: " + System.Environment.GetEnvironmentVariable("subscriptionEndpoint"));
 				// Request headers
-				//client.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", System.Environment.GetEnvironmentVariable("subscriptionKey"));
-				client.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", subscriptionKey);
+				client.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", System.Environment.GetEnvironmentVariable("subscriptionKey"));
+				//client.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", subscriptionKey);
 
 				// Request parameters
-				//var uri = System.Environment.GetEnvironmentVariable("subscriptionEndpoint");
-				var uri = subscriptionEndpoint;
+				var uri = System.Environment.GetEnvironmentVariable("subscriptionEndpoint");
+				//var uri = subscriptionEndpoint;
 
 				HttpResponseMessage response;
 				string contents = "";
@@ -153,16 +147,14 @@ namespace AWSLambda2
 				GetObjectRequest request = new GetObjectRequest();
 				request.BucketName = bucket;
 				request.Key = key;
-				string url = S3Client.GeneratePreSignedURL(bucket, key, DateTime.Now.AddDays(1), null);
 
 				// Request body
 				var body = new URLObject();
-				body.value = url;
+				body.value = objectUrl;
 
 				string json = JsonConvert.SerializeObject(body);
 				//Console.Write("Sending json: " + json + "To Key: " + System.Environment.GetEnvironmentVariable("subscriptionKey"));
 				byte[] byteData = Encoding.UTF8.GetBytes(json);
-
 				try
 				{
 					using (var content = new ByteArrayContent(byteData))
@@ -191,7 +183,7 @@ namespace AWSLambda2
 					else
 					{
 						Console.WriteLine(".!!  ----  ----  ERROR for img: " + key + " in bucket: " + bucket);
-						throw new Exception("the proper response was not found" + obj);
+						throw new Exception(" .. the proper response was not found" + obj);
 					}
 				}
 				catch (Exception ex)
@@ -243,13 +235,13 @@ namespace AWSLambda2
 				{
 					var sendRequest = new SendEmailRequest
 					{
-						//Source = System.Environment.GetEnvironmentVariable("senderAddress"),
-						Source = senderAddress,
+						Source = System.Environment.GetEnvironmentVariable("senderAddress"),
+						//Source = senderAddress,
 						Destination = new Destination
 						{
 							ToAddresses =
-							//new List<string> { System.Environment.GetEnvironmentVariable("emailAddress") }
-							new List<string> { emailAddress }
+							new List<string> { System.Environment.GetEnvironmentVariable("emailAddress") }
+							//new List<string> { emailAddress }
 						},
 						Message = new Amazon.SimpleEmail.Model.Message
 						{
