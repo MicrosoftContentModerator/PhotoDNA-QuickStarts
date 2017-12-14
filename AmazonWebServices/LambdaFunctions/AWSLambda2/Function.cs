@@ -188,25 +188,8 @@ namespace AWSLambda2
 				}
 				catch (Exception ex)
 				{
-					// TODO log exception always
 					Console.WriteLine("And Error was thrown trying to send Json to the PDNA subscription endpoint: " + ex.Message);
-					/*
-					Console.WriteLine("And Error was thrown trying to send Json to the PDNA subscription endpoint: " + System.Environment.GetEnvironmentVariable("subscriptionEndpoint") + ex.Message);
 
-					if (System.Environment.GetEnvironmentVariable("callbackEndpoint") != null || System.Environment.GetEnvironmentVariable("callbackEndpoint") != String.Empty)
-					{
-						uri = System.Environment.GetEnvironmentVariable("callbackEndpoint");
-
-						contents += "<br> /r/n An Exception was thrown attempting to send the above Json to " + System.Environment.GetEnvironmentVariable("callbackEndpoint") + "  Exception:  " + ex.Message;
-
-						using (var content = new ByteArrayContent(byteData))
-						{
-							content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
-							response = await client.PostAsync(uri, content);
-							contents = await response.Content.ReadAsStringAsync();
-						}
-					}
-					*/
 				}
 
 			}
