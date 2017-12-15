@@ -1,42 +1,48 @@
+﻿
+## AWS S3 Monitoring using Microsoft PhotoDNA
+*Quick Start Guide*
 
-## Photo DNA Quick Start Guide for AWS ##
+This document will guide you through the steps to set up Microsoft PhotoDNA Monitoring for the images in your existing S3 buckets on AWS. PhotoDNA is a technology developed by Microsoft to scan images for *unacceptable* content.  Before you start, visit https://myphotodna.microsoftmoderator.com/ [the PhotoDNA home  page] to learn more about PhotoDNA and create a subscription.
 
-This document will guide you through the steps to set up Photo DNA Monitoring for your own existing S3 buckets.
-Before you start, visit [the Photo DNA home page](https://myphotodna.microsoftmoderator.com/) and create a subscription.
-
-**1)**	Click ![https://console.aws.amazon.com/cloudformation/home?region=us-west-2#/stacks/new?stackName=S3MonitorUsingPhotoDNA&templateURL=PhotoDNA-QuickStarts/AmazonWebServices/CloudFormationTemplate/PhotoDNAMonitorStackTemplate.template](https://dmhnzl5mp9mj6.cloudfront.net/application-management_awsblog/images/cloudformation-launch-stack.png) to be navigated to your AWS accounts CloudFormation page using our CloudFormation Template. You will be navigate automatically to this page once you have logged in:
+**1)**	Click ![https://console.aws.amazon.com/cloudformation/home?region=us-west-2#/stacks/new?stackName=S3MonitorUsingPhotoDNA&templateURL=PhotoDNA-QuickStarts/AmazonWebServices/CloudFormationTemplate/PhotoDNAMonitorStackTemplate.template](https://dmhnzl5mp9mj6.cloudfront.net/application-management_awsblog/images/cloudformation-launch-stack.png) to be navigated to the CloudFormation service page in your AWS Management Console (you will be asked to login to your AWS account). The page should look similar to the picture below, with the S3 template URL already specified.  Click **Next** to continue.
 ![](https://s3-us-west-2.amazonaws.com/allyislambdafunctionsbucket/AWSLandingPage.PNG)
-Nothing needs to be done on this page, the URL for the CloudFormation Stack will be automatically populated into the appropriate field. Click **Next** to continue
 ![](https://github.com/MicrosoftContentModerator/PhotoDNA-QuickStarts/blob/dev_singleLambda/AmazonWebServices/Documentation/AWSLandingPage.PNG?raw=true)
 
-**2)**	On the first fill out the following fields:  
+**2)**	Next page is the "Details" page. Fill out the following fields:
+
 ![](https://github.com/MicrosoftContentModerator/PhotoDNA-QuickStarts/blob/dev_singleLambda/AmazonWebServices/Documentation/AWSFirstPageCapture.PNG?raw=true)
 
-- The **Stack name** will auto-populate, but can be changed to users preference.
-- **Callback Endpoint** is optional, in the case of an error, the error will be Posted to the given URL
-- **Notification Receiver** Email Address is the email that will be messaged when the Photo DNA scanner find an dangerous content, the email must be verified by your AWS account if your account is still in the 'Sandbox', [visit this page for instructions](https://us-west-2.console.aws.amazon.com/ses/home?region=us-west-2#verified-senders-email ) 
-- **Photo DNA Endpoint** is the subscription-specific endpoint where the scanner will send the images to be analyzed. To find your personal PDNA Endpoint [visit this page](https://testpdnaui.azurewebsites.net/).  
-- **Photo DNA Key** is the subscription-specific key used to identify your subscription. To find your personal PDNA key [visit this page](https://testpdnaui.azurewebsites.net/ ) 
-- For **Sender Email** field, the email must be verified by your AWS account, [visit this page for instructions](https://github.com/MicrosoftContentModerator/PhotoDNA-QuickStarts/blob/dev_singleLambda/AmazonWebServices/Documentation/AWSSecondPageCapture.PNG?raw=true) 
+- **Stack name:** Name of the CloudFormation stack that you are installing. This field will auto-populate, but can be changed to your preference. (A stack is nothing but a set of AWS resources, such as lambda functions, notification topics, logs, queues, etc., that will be created and configured at the end of this process!)
+- **Callback Endpoint:** A URL of *your* web service, which is capable of receiving JSON documents. If there is any error during monitoring, the stack will post the error to this endpoint. This field is optional.
+- **Notification Receiver:** An email address that receives a notification when PhotoDNA finds *unacceptable* content. This address also receives notification when an error occurs during monitoring. (If you are testing this stack in a 'Sandbox' environment, then this email address must first be verified by AWS, [visit this page for instructions.](https://us-west-2.console.aws.amazon.com/ses/home?region=us-west-2#verified-senders-email ))
+- **PhotoDNA Endpoint:** A URL that was provided to you when you subscribed to Microsoft PhotoDNA. This is the URL to which your images will be uploaded and scanned. This URL is specific to your subscription. To find your personal PDNA Endpoint, [visit this page](https://testpdnaui.azurewebsites.net/).  
+- **PhotoDNA Key:** A unique key that was provided to you when you subscribed to Microsoft PhotoDNA. This key is specific to your subscription, and should not be shared with other users. To find your personal PDNA key, [visit this page](https://testpdnaui.azurewebsites.net/ ) 
+- **Sender Email:** An email address from which the notifications will be sent. This email address must first be verified by AWS, [visit this page for instructions.](https://github.com/MicrosoftContentModerator/PhotoDNA-QuickStarts/blob/dev_singleLambda/AmazonWebServices/Documentation/AWSSecondPageCapture.PNG?raw=true) 
 
-**3)**	On Options page, click **Next**
+Then click **Next** to continue.
+
+**3)**	Next page is the "Options" page. No user input is needed.
+
  ![](https://github.com/MicrosoftContentModerator/PhotoDNA-QuickStarts/blob/dev_singleLambda/AmazonWebServices/Documentation/AWSSecondPageCapture.PNG?raw=true)
-The options page contains a number of parameters that can change how the stack is deployed to your AWS account. It allows you to add tags to the different architecture created in the stack, change what permissions the stack is given during creation or limit who can access the stacks elements. Do not edit this page unless you know how it will effect the deployment of the stack
+The options page contains a number of parameters that can change how the stack is deployed to your AWS account. It allows you to add tags so as to differentiate between difference architectures, change the permissions provided to the stack during creation, or limit who can access the stacks elements. Do not edit this page unless you know how it will effect the deployment of the stack.
 
-**4)**	On Review, double-check the parameters and other options selected during the process above. Then acknowledge the terms and click **‘Create,’** your stack will then be created.
+Click **Next** to continue.
 
-**5)**	Once the stack has finished (this may take several minutes), navigate to your [Amazon S3 management page](https://s3.console.aws.amazon.com/s3) and select any bucket you want monitored by PDNA
+**4)**	Next page is the "Review" page. Double-check the parameters and other options selected during the above process. Then acknowledge the terms and click the **‘Create,’** button. Your stack will then be created.
+
+**5)**	Once the stack creation completes (this may take several minutes), navigate to your [Amazon S3 management page](https://s3.console.aws.amazon.com/s3) and select any bucket you want monitored by PhotoDNA.
 
 **6)**	From the bucket landing page, Select **Properties**, then **Events**
+
 ![](https://github.com/MicrosoftContentModerator/PhotoDNA-QuickStarts/blob/dev_singleLambda/AmazonWebServices/Documentation/BucketPage.PNG?raw=true)
 
-**7)**	On the events page select “**Add Notification**,” then fill in the following fields: 
+**7)**	On the events tab select “**Add Notification**,” then fill in the following fields: 
 ![](https://github.com/MicrosoftContentModerator/PhotoDNA-QuickStarts/blob/dev_singleLambda/AmazonWebServices/Documentation/EventsPage.PNG?raw=true)
 
-- Select a **Name** for your event
-- Select **Put and Post**
-- Select **SQS Queue** under the “**Send To**” dropdown
-- Select the **Simple Queue Name** created by the stack.
+- **Name:** A name for your event (you can provide any name you want)
+- Select **Put and Post** (this indicates that you want to monitor both create as well as update of images in this bucket)
+- Select **SNS Topic** under the “**Send To**” dropdown
+- Select the **Simple Topic Name** created by the stack (The topic name will begin with the stack name that you provided in the second step above)
 
 **8)**	Select **Save**
 Your bucket is now ready to be monitored by PDNA, repeat steps 6-8 for each bucket you want monitored by PDNAs services. 
@@ -44,4 +50,4 @@ Your bucket is now ready to be monitored by PDNA, repeat steps 6-8 for each buck
 **9)** Navigate to your AWS accounts **Lambda** page using the Services tab under "Compute." Once at the index, you should see the newly created lambda Function in the list of installed functions. Select the newly created Lambda and once the overview of the function loads, scroll to the bottom of the page where you'll see a section for **Concurrency.** Check the button for "Reserve concurrency" and enter **10** into the field. Then click **Save** at the top right
 ![](https://github.com/MicrosoftContentModerator/PhotoDNA-QuickStarts/blob/dev_singleLambda/AmazonWebServices/Documentation/LambdaConcurrencyPage.PNG?raw=true)
 
-**10)** Finally, just check your email (the Notification Receiver email used above) and confirm the subscription to the Error Catching Topic. This will inform the email address whenever an error occurs during a scan. The email confirmation link should be waiting in your in-box once the Stack completes.
+**10)** Finally, check the Notification Receiver email inbox (used above). An email confirmation link should be waiting in your in-box once the Stack completes. Click on the link to confirm the subscription to the Error Catching Topic. You are confirming that you are willing to receive email for errors that occured during the scan. 
