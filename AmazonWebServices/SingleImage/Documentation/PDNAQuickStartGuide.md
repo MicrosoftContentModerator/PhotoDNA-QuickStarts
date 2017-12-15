@@ -1,4 +1,4 @@
-﻿
+
 ## AWS S3 Monitoring using Microsoft PhotoDNA
 *Quick Start Guide*
 
@@ -37,7 +37,7 @@ Click **Next** to continue.
 ![](https://github.com/MicrosoftContentModerator/PhotoDNA-QuickStarts/blob/dev_singleLambda/AmazonWebServices/Documentation/BucketPage.PNG?raw=true)
 
 **7)**	On the events tab select “**Add Notification**,” then fill in the following fields: 
-![](https://github.com/MicrosoftContentModerator/PhotoDNA-QuickStarts/blob/dev_singleLambda/AmazonWebServices/Documentation/EventsPage.PNG?raw=true)
+![](https://github.com/MicrosoftContentModerator/PhotoDNA-QuickStarts/blob/dev/AmazonWebServices/SingleImage/Documentation/EventPageLambdaTarget.PNG?raw=true)
 
 - **Name:** A name for your event (you can provide any name you want)
 - Select **Put and Post** (this indicates that you want to monitor both create as well as update of images in this bucket)
