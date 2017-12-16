@@ -1,0 +1,6 @@
+C:\Users\user1\Documents\PhotoDNA-QuickStarts\AmazonWebServices\SingleImage\LambdaFunctions\AWSLambda2\bin\Release\netcoreapp1.0\AWSLambda2.deps.json
+C:\Users\user1\Documents\PhotoDNA-QuickStarts\AmazonWebServices\SingleImage\LambdaFunctions\AWSLambda2\bin\Release\netcoreapp1.0\AWSLambda2.dll
+C:\Users\user1\Documents\PhotoDNA-QuickStarts\AmazonWebServices\SingleImage\LambdaFunctions\AWSLambda2\bin\Release\netcoreapp1.0\AWSLambda2.pdb
+C:\Users\user1\Documents\PhotoDNA-QuickStarts\AmazonWebServices\SingleImage\LambdaFunctions\AWSLambda2\obj\Release\netcoreapp1.0\AWSLambda2.AssemblyInfo.cs
+C:\Users\user1\Documents\PhotoDNA-QuickStarts\AmazonWebServices\SingleImage\LambdaFunctions\AWSLambda2\obj\Release\netcoreapp1.0\AWSLambda2.dll
+C:\Users\user1\Documents\PhotoDNA-QuickStarts\AmazonWebServices\SingleImage\LambdaFunctions\AWSLambda2\obj\Release\netcoreapp1.0\AWSLambda2.pdb
