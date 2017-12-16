@@ -51,3 +51,4 @@ Your bucket is now ready to be monitored by PDNA, repeat steps 6-8 for each buck
 ![](https://github.com/MicrosoftContentModerator/PhotoDNA-QuickStarts/blob/dev_singleLambda/AmazonWebServices/Documentation/LambdaConcurrencyPage.PNG?raw=true)
 
 **10)** Finally, check the Notification Receiver email inbox (used above). An email confirmation link should be waiting in your in-box once the Stack completes. Click on the link to confirm the subscription to the Error Catching Topic. You are confirming that you are willing to receive email for errors that occurred during the scan. 
+![](https://github.com/MicrosoftContentModerator/PhotoDNA-QuickStarts/blob/dev/AmazonWebServices/SingleImage/Documentation/EmailConfirmation.png?raw=true)
