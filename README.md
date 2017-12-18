@@ -3,7 +3,7 @@
 *Quick Start Guide*
 
 This document will guide you through the steps to set up Microsoft PhotoDNA Monitoring for the images in your existing S3 buckets on AWS. PhotoDNA is a technology developed by Microsoft to scan images for *unacceptable* content.  Before you start, visit https://myphotodna.microsoftmoderator.com/ [the PhotoDNA home  page] to learn more about PhotoDNA and create a subscription.
-![](https://github.com/MicrosoftContentModerator/PhotoDNA-QuickStarts/blob/dev/AmazonWebServices/SingleImage/Documentation/SimpleArchDiagram_placeholder.png?raw=true)
+![](https://github.com/MicrosoftContentModerator/PhotoDNA-QuickStarts/blob/dev/AmazonWebServices/SingleImage/Documentation/SimpleArchDiagram.png?raw=true)
 A brief overview of the architecture: This stack will create a Worker Lambda function that will be invoked automatically when a file is uploaded to the S3 Buckets you specify during setup. The Worker can run concurrently, up to 10 instances at one time, sending images to Photo DNA to be analyzed for nefarious content. Photo DNA will send back a response which will be logged in CloudWatch. Any image hits will trigger an email notification informing you of the image in question. Any errors will be caught and sent to a DeadLetter notification topic that will also email you to let you know what went wrong. 
 
 **1)**	Click ![https://console.aws.amazon.com/cloudformation/home?region=us-west-2#/stacks/new?stackName=S3MonitorUsingPhotoDNA&templateURL=https://s3-us-west-2.amazonaws.com/allyislambdafunctionsbucket/PhotoDNAMonitorStack_plusDeadLetterEmail.template](https://dmhnzl5mp9mj6.cloudfront.net/application-management_awsblog/images/cloudformation-launch-stack.png) to be navigated to the CloudFormation service page in your AWS Management Console (you will be asked to login to your AWS account). The page should look similar to the picture below, with the S3 template URL already specified.  Click **Next** to continue.
@@ -51,4 +51,3 @@ Your bucket is now ready to be monitored by PDNA, repeat steps 6-8 for each buck
 ![](https://github.com/MicrosoftContentModerator/PhotoDNA-QuickStarts/blob/dev_singleLambda/AmazonWebServices/Documentation/LambdaConcurrencyPage.PNG?raw=true)
 
 **10)** Finally, check the Notification Receiver email inbox (used above). An email confirmation link should be waiting in your in-box once the Stack completes. Click on the link to confirm the subscription to the Error Catching Topic. You are confirming that you are willing to receive email for errors that occurred during the scan. 
-![](https://github.com/MicrosoftContentModerator/PhotoDNA-QuickStarts/blob/dev/AmazonWebServices/SingleImage/Documentation/EmailConfirmation.png?raw=true)
