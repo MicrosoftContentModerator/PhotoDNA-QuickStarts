@@ -116,6 +116,11 @@ namespace AWSLambda2
 				BucketName = bucket,
 				Key = key
 			};
+			if (!SupportedImageTypes.Contains(Path.GetExtension(key)))
+			{
+				Console.WriteLine("    IGNORE Object {bucket}:{key} is not a supported image type");
+				return "";
+			}
 			GetPreSignedUrlRequest expiryUrlRequest = new GetPreSignedUrlRequest
 			{
 				BucketName = (bucket),
