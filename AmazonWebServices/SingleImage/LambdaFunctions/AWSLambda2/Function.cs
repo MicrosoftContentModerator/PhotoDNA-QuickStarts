@@ -223,8 +223,15 @@ namespace AWSLambda2
 			{
 				var postClient = new HttpClient();
 				var result = await message.Content.ReadAsStringAsync();
-				dynamic jsonResponse = JsonConvert.DeserializeObject(result);
-				var postResponse = await postClient.PostAsync(System.Environment.GetEnvironmentVariable("callbackEndpoint"), jsonResponse);
+				dynamic jsonResponse = JsonConvert.SerializeObject(result);
+				Uri uri = new Uri(System.Environment.GetEnvironmentVariable("callbackEndpoint"));
+				byte[] byteData = Encoding.UTF8.GetBytes(jsonResponse);
+				using (var content = new ByteArrayContent(byteData))
+				{
+					// post json
+					content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
+					var postResponse = await postClient.PostAsync(uri, content);
+				}
 			}
 			catch (Exception ex)
 			{
@@ -305,8 +312,15 @@ namespace AWSLambda2
 			{
 				var postClient = new HttpClient();
 				var result = error;
-				dynamic jsonResponse = JsonConvert.DeserializeObject(result);
-				var postResponse = await postClient.PostAsync(System.Environment.GetEnvironmentVariable("callbackEndpoint"), jsonResponse);
+				dynamic jsonResponse = JsonConvert.SerializeObject(result);
+				Uri uri = new Uri(System.Environment.GetEnvironmentVariable("callbackEndpoint"));
+				byte[] byteData = Encoding.UTF8.GetBytes(jsonResponse);
+				using (var content = new ByteArrayContent(byteData))
+				{
+					// post json
+					content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
+					var postResponse = await postClient.PostAsync(uri, content);
+				}
 			}
 			catch (Exception ex)
 			{
