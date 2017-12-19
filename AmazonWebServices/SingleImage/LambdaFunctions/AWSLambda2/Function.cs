@@ -102,6 +102,12 @@ namespace AWSLambda2
 			string bucket = input.Records[0].S3.Bucket.Name;
 			string key = input.Records[0].S3.Object.Key;
 
+			if (!SupportedImageTypes.Contains(Path.GetExtension(key)))
+			{
+				Console.WriteLine("    IGNORE Object {bucket}:{key} is not a supported image type");
+				return;
+			}
+
 			//Console.WriteLine($"sending image from {input.Records[0].S3.Bucket.Name}:{input.Records[0].S3.Object.Key}");
 			string url = BuildObjectUrl(bucket, key);
 
@@ -116,11 +122,6 @@ namespace AWSLambda2
 				BucketName = bucket,
 				Key = key
 			};
-			if (!SupportedImageTypes.Contains(Path.GetExtension(key)))
-			{
-				Console.WriteLine("    IGNORE Object {bucket}:{key} is not a supported image type");
-				return "";
-			}
 			GetPreSignedUrlRequest expiryUrlRequest = new GetPreSignedUrlRequest
 			{
 				BucketName = (bucket),
