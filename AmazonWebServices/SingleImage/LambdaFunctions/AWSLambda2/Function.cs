@@ -180,7 +180,7 @@ namespace AWSLambda2
 					if (obj.IsMatch == "True")
 					{
 						Console.Write("!!  ----  ----  FOUND MATCH for img: " + key + " in bucket: " + bucket);
-						emailResponse = await MailNotification(bucket, key, objectUrl);
+						emailResponse = await MailNotification(bucket, key, objectUrl, response);
 					}
 					else if (obj.IsMatch == "False")
 					{
@@ -190,7 +190,7 @@ namespace AWSLambda2
 					{
 						Console.WriteLine(".!!  ----  ----  ERROR for img: " + key + " in bucket: " + bucket);
 						string err = (" .. the proper response was not found" + obj);
-						await MailNotificationError(bucket, key, objectUrl, err);
+						await MailNotificationError(bucket, key, objectUrl, await response.Content.ReadAsStringAsync());
 						throw new Exception(" .. the proper response was not found" + obj);
 					}
 				}
@@ -217,8 +217,20 @@ namespace AWSLambda2
 			public string value = "";
 		}
 
-		private async Task<SendEmailResponse> MailNotification(string bucket, string key, string url)
+		private async Task<SendEmailResponse> MailNotification(string bucket, string key, string url, HttpResponseMessage message)
 		{
+			try
+			{
+				var postClient = new HttpClient();
+				var result = await message.Content.ReadAsStringAsync();
+				dynamic jsonResponse = JsonConvert.DeserializeObject(result);
+				var postResponse = await postClient.PostAsync(System.Environment.GetEnvironmentVariable("callbackEndpoint"), jsonResponse);
+			}
+			catch (Exception ex)
+			{
+				Console.WriteLine(ex);
+			}
+
 			try
 			{
 				Console.Write("!!  ----  ----  ---- FOUND MATCH: Attempting to send email for: " + bucket + " " + key);
@@ -289,6 +301,17 @@ namespace AWSLambda2
 
 		private async Task<SendEmailResponse> MailNotificationError(string bucket, string key, string url, string error)
 		{
+			try
+			{
+				var postClient = new HttpClient();
+				var result = error;
+				dynamic jsonResponse = JsonConvert.DeserializeObject(result);
+				var postResponse = await postClient.PostAsync(System.Environment.GetEnvironmentVariable("callbackEndpoint"), jsonResponse);
+			}
+			catch (Exception ex)
+			{
+				Console.WriteLine(ex);
+			}
 			try
 			{
 				Console.Write("!!  ----  ----  ---- FOUND ERROR: Attempting to send email for: " + bucket + " " + key);
