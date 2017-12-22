@@ -1,111 +1,153 @@
 {
-    "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
-    "contentVersion": "1.0.0.0",
-    "parameters": {
-
-      "senderEmail": {
-        "value": "pdnaMonitoring",
-          "metadata": {
-            "description": "The email account that will be used to send the notification emails."
-          }
-      },
-      "receiverEmail": {
-        "value": "example@test.com",
-          "metadata": {
-            "description": "The email that will receive notificaitons when PhotoDNA happens to find a match on images uploaded to your storage"
-          }
-      },
-      "subscriptionEndpoint": {
-        "value": "",
-          "metadata": {
-            "description": "Your unique PhotoDNA endpoint addess this can be found here: "
-          }
-      },
-      "subscriptionKey": {
-        "value": "",
-          "metadata": {
-            "description": "Your unique PhotoDNA subscription key, this can be found here: "
-          }
-      },
-      "callbackEndpoint": {
-        "value": "",
-          "metadata": {
-            "description": "(optional) when PhotoDNA returns a match or errors occure, the results will be posted to this address"
-          }
-      },
-      "storageAccountName": {
-        "value": "",
-          "metadata": {
-            "description": "name of the new storage account that will be created for the function app"
-          }
-      }
-    },
-    "variables": {
-
-    },
-    "resources": [
-      {
-        "apiVersion": "2015-08-01",
-        "name": "PhotoDNAMonitoring",
-        "type": "functions",
-        "dependsOn": [
-           "[variables('storageAccountName')]"
-        ],
-        "properties": {
-          "config": {
-            "bindings": [
-              {
-                "authLevel": "anonymous",
-                "name": "req",
-                "type": "blobTrigger",
-                "direction": "in"
-              }
-            ]
-          },
-          "appSettings": [
-              {
-                  "name": "AzureWebJobsDashboard",
-                  "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listKeys(variables('storageAccountid'),'2015-05-01-preview').key1)]"
-              },
-              {
-                  "name": "AzureWebJobsStorage",
-                  "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listKeys(variables('storageAccountid'),'2015-05-01-preview').key1)]"
-              },
-              {
-                  "name": "senderEmail",
-                  "value": "variables('senderEmail')"
-              },
-              {
-                  "name": "receiverEmail",
-                  "value": "variables('receiverEmail')"
-              },
-              {
-                  "name": "subscriptionEndpoint",
-                  "value": "variables('subscriptionEndpoint')"
-              },
-              {
-                  "name": "subscriptionKey",
-                  "value": "variables('subscriptionKey')"
-              },
-              {
-                  "name": "callbackEndpoint",
-                  "value": "variables('callbackEndpoint')"
-              }
-          ],
-          "files": {
-            "run.csx": ""
-          }
-        }
-      },
-      {
-        "type": "Microsoft.Storage/storageAccounts",
-        "name": "[variables('storageAccountName')]",
-        "apiVersion": "2015-06-15",
-        "location": "[resourceGroup().location]",
-        "properties": {
-          "accountType": "[parameters('storageAccountType')]"
-        }
-      }
-    ],
-      "outputs": {  }
+	"$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"pdnaStorageAccountType": {
+			"type": "string",
+			"defaultValue": "Standard_LRS",
+			"allowedValues": [
+				"Standard_LRS",
+				"Standard_ZRS",
+				"Standard_GRS",
+				"Standard_RAGRS",
+				"Premium_LRS"
+			]
+		},
+		"functionAppName": {
+			"value": "",
+			"metadata": {
+				"description": "name of the new function that will be created"
+			}
+		},
+		"storageAccountName": {
+			"value": "",
+			"metadata": {
+				"description": "name of the new storage account that will be created for the function app"
+			}
+		},
+		"senderEmail": {
+			"value": "pdnaMonitoring",
+			"metadata": {
+				"description": "The email account that will be used to send the notification emails."
+			}
+		},
+		"receiverEmail": {
+			"value": "example@test.com",
+			"metadata": {
+				"description": "The email that will receive notificaitons when PhotoDNA happens to find a match on images uploaded to your storage"
+			}
+		},
+		"subscriptionEndpoint": {
+			"value": "",
+			"metadata": {
+				"description": "Your unique PhotoDNA endpoint addess this can be found here: "
+			}
+		},
+		"subscriptionKey": {
+			"value": "",
+			"metadata": {
+				"description": "Your unique PhotoDNA subscription key, this can be found here: "
+			}
+		},
+		"callbackEndpoint": {
+			"value": "",
+			"metadata": {
+				"description": "(optional) when PhotoDNA returns a match or errors occure, the results will be posted to this address"
+			}
+		}
+	},
+	"variables": {
+		"pdnaStorageAccountName": "[concat('pdnaStorageAccount', uniqueString(resourceGroup().id))]",
+		"functionAppName": "[parameters('functionAppName')]",
+		"storageAccountName": "[parameters('storageAccountName')]",
+		"senderEmail": "[parameters('senderEmail')]",
+		"receiverEmail": "[parameters('receiverEmail')]",
+		"subscriptionEndpoint": "[parameters('subscriptionEndpoint')]",
+		"subscriptionKey": "[parameters('subscriptionKey')]",
+		"callbackEndpoint": "[parameters('callbackEndpoint')]"
+	},
+	"resources": [
+		{
+			"apiVersion": "2015-08-01",
+			"name": "PhotoDNAMonitoring",
+			"type": "functions",
+			"dependsOn": [
+				"[variables('storageAccountName')]"
+			],
+			"properties": {
+				"config": {
+					"bindings": [
+						{
+							"authLevel": "anonymous",
+							"name": "req",
+							"type": "blobTrigger",
+							"direction": "in"
+						}
+					]
+				},
+				"appSettings": [
+					{
+						"name": "AzureWebJobsDashboard",
+						"value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listKeys(variables('storageAccountid'),'2015-05-01-preview').key1)]"
+					},
+					{
+						"name": "AzureWebJobsStorage",
+						"value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listKeys(variables('storageAccountid'),'2015-05-01-preview').key1)]"
+					},
+					{
+						"name": "senderEmail",
+						"value": "variables('senderEmail')"
+					},
+					{
+						"name": "receiverEmail",
+						"value": "variables('receiverEmail')"
+					},
+					{
+						"name": "subscriptionEndpoint",
+						"value": "variables('subscriptionEndpoint')"
+					},
+					{
+						"name": "subscriptionKey",
+						"value": "variables('subscriptionKey')"
+					},
+					{
+						"name": "callbackEndpoint",
+						"value": "variables('callbackEndpoint')"
+					}
+				],
+				"files": {
+					"run.csx": ""
+				}
+			}
+		},
+		{
+			"name": "[variables('pdnaStorageAccountName')]",
+			"type": "Microsoft.Storage/storageAccounts",
+			"location": "[resourceGroup().location]",
+			"apiVersion": "2016-01-01",
+			"sku": {
+				"name": "[parameters('pdnaStorageAccountType')]"
+			},
+			"dependsOn": [],
+			"tags": {
+				"displayName": "pdnaStorageAccount"
+			},
+			"kind": "Storage"
+		},
+		{
+			"apiVersion": "2015-08-01",
+			"name": "appsettings",
+			"type": "config",
+				"dependsOn": [
+					"[resourceId('Microsoft.Web/Sites', parameters('pdnaStorageAccountName'))]",
+					"[resourceId('Microsoft.Web/Sites/sourcecontrols', parameters('pdnaStorageAccountName'), 'web')]",
+					"[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]"
+				],
+			"properties": {
+				"AzureWebJobsStorage": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listKeys(variables('storageAccountid'),'2015-05-01-preview').key1)]",
+				"AzureWebJobsDashboard": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listKeys(variables('storageAccountid'),'2015-05-01-preview').key1)]"
+			}
+		},
+		"outputs",
+		{}
 }

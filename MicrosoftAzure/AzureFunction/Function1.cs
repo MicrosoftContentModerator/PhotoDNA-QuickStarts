@@ -9,6 +9,7 @@ using Microsoft.Azure.WebJobs;
 using Newtonsoft.Json;
 using Microsoft.Azure.WebJobs.Host;
 using System.Text;
+using System.Configuration;
 
 namespace FunctionApp1
 {
@@ -22,11 +23,11 @@ namespace FunctionApp1
 		static string MatchEmailBody = "An image was uploaded to Azure which was flagged for innapropiate content by PhotoDNA";
 
 		//TODO delete all this
-		static string subscriptionKey = "884a6e4f5cc74558a32d5c759dd43e70";
-		static string subscriptionEndpoint = "https://apim.projectwabash.com/photodna/v1.0/Match";
-		static string senderEmail = "jnnortz@gmail.com";
-		static string receiverEmail = "jnnortz@gmail.com";
-		static string callbackEndpoint = "https://requestb.in/1d2ti1q1";
+		static string subscriptionKey = ConfigurationManager.AppSettings["subscriptionKey"];
+		static string subscriptionEndpoint = ConfigurationManager.AppSettings["subscriptionEndpoint"];
+		static string senderEmail = ConfigurationManager.AppSettings["senderEmail"];
+		static string receiverEmail = ConfigurationManager.AppSettings["receiverEmail"];
+		static string callbackEndpoint = ConfigurationManager.AppSettings["callbackEndpoint"];
 
 		[FunctionName("Function_1")]
 		public static async void Run([BlobTrigger("allyispictureuploadfolder/{name}.{ext}", Connection = "AzureWebJobsStorage")]Stream input, string name, string ext, TraceWriter log)
