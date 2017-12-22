@@ -1,0 +1,78 @@
+{
+    "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+
+      "senderEmail": {
+        "value": "pdnaMonitoring",
+          "metadata": {
+            "description": "The email account that will be used to send the notification emails."
+          }
+      },
+      "receiverEmail": {
+        "value": "example@test.com",
+          "metadata": {
+            "description": "The email that will receive notificaitons when PhotoDNA happens to find a match on images uploaded to your storage"
+          }
+      },
+      "subscriptionEndpoint": {
+        "value": "",
+          "metadata": {
+            "description": "Your unique PhotoDNA endpoint addess this can be found here: "
+          }
+      },
+      "subscriptionKey": {
+        "value": "",
+          "metadata": {
+            "description": "Your unique PhotoDNA subscription key, this can be found here: "
+          }
+      },
+      "callbackEndpoint": {
+        "value": "",
+          "metadata": {
+            "description": "(optional) when PhotoDNA returns a match or errors occure, the results will be posted to this address"
+          }
+      },
+    },
+    "variables": {
+
+    },
+    "resources": [
+      {
+        "apiVersion": "2015-08-01",
+        "name": "PhotoDNAMonitoring",
+        "type": "functions",
+        "dependsOn": [
+          "[resourceId('Microsoft.Web/sites', variables('pdnaMonitoring'))]"
+        ],
+        "properties": {
+          "config": {
+            "bindings": [
+              {
+                "authLevel": "anonymous",
+                "name": "req",
+                "type": "blobTrigger",
+                "direction": "in"
+              }
+            ]
+          },
+          "files": {
+            "run.csx": ""
+          }
+        }
+      },
+      {
+          "name": "appsettings",
+          "type": "config",
+          "apiVersion": "2015-08-01",
+          "dependsOn": [
+              "[concat('Microsoft.Web/sites/', variables('webSiteName'))]"
+          ],
+          "properties": {
+              "key1": "[parameter('AppSetting_Key1_Value')]",
+              "key2": "value2"
+          }
+      },
+    ],
+      "outputs": {  }
+}
