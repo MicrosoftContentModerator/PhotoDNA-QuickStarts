@@ -33,6 +33,12 @@
             "description": "(optional) when PhotoDNA returns a match or errors occure, the results will be posted to this address"
           }
       },
+      "storageAccountName": {
+        "value": "",
+          "metadata": {
+            "description": "name of the new storage account that will be created for the function app"
+          }
+      }
     },
     "variables": {
 
@@ -43,7 +49,7 @@
         "name": "PhotoDNAMonitoring",
         "type": "functions",
         "dependsOn": [
-          "[resourceId('Microsoft.Web/sites', variables('pdnaMonitoring'))]"
+           "[variables('storageAccountName')]"
         ],
         "properties": {
           "config": {
@@ -56,23 +62,50 @@
               }
             ]
           },
+          "appSettings": [
+              {
+                  "name": "AzureWebJobsDashboard",
+                  "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listKeys(variables('storageAccountid'),'2015-05-01-preview').key1)]"
+              },
+              {
+                  "name": "AzureWebJobsStorage",
+                  "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listKeys(variables('storageAccountid'),'2015-05-01-preview').key1)]"
+              },
+              {
+                  "name": "senderEmail",
+                  "value": "variables('senderEmail')"
+              },
+              {
+                  "name": "receiverEmail",
+                  "value": "variables('receiverEmail')"
+              },
+              {
+                  "name": "subscriptionEndpoint",
+                  "value": "variables('subscriptionEndpoint')"
+              },
+              {
+                  "name": "subscriptionKey",
+                  "value": "variables('subscriptionKey')"
+              },
+              {
+                  "name": "callbackEndpoint",
+                  "value": "variables('callbackEndpoint')"
+              }
+          ],
           "files": {
             "run.csx": ""
           }
         }
       },
       {
-          "name": "appsettings",
-          "type": "config",
-          "apiVersion": "2015-08-01",
-          "dependsOn": [
-              "[concat('Microsoft.Web/sites/', variables('webSiteName'))]"
-          ],
-          "properties": {
-              "key1": "[parameter('AppSetting_Key1_Value')]",
-              "key2": "value2"
-          }
-      },
+        "type": "Microsoft.Storage/storageAccounts",
+        "name": "[variables('storageAccountName')]",
+        "apiVersion": "2015-06-15",
+        "location": "[resourceGroup().location]",
+        "properties": {
+          "accountType": "[parameters('storageAccountType')]"
+        }
+      }
     ],
       "outputs": {  }
 }
