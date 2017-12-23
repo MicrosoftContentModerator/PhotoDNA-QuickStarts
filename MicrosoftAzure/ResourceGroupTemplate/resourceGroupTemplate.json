@@ -22,7 +22,13 @@
 		"storageAccountName": {
 			"value": "",
 			"metadata": {
-				"description": "name of the new storage account that will be created for the function app"
+				"description": "the name of the storage account that will be monitored by the function app"
+			}
+		},
+		"storageAccountSubscriptionId": {
+			"value": "",
+			"metadata": {
+				"description": "the key of the storage account that will be monitored by the function app, get the key here: TODO"
 			}
 		},
 		"senderEmail": {
@@ -59,6 +65,7 @@
 	"variables": {
 		"pdnaStorageAccountName": "[concat('pdnaStorageAccount', uniqueString(resourceGroup().id))]",
 		"functionAppName": "[parameters('functionAppName')]",
+		"storageAccountSubscriptionId": "[parameters('storageAccountSubscriptionId')]",
 		"storageAccountName": "[parameters('storageAccountName')]",
 		"senderEmail": "[parameters('senderEmail')]",
 		"receiverEmail": "[parameters('receiverEmail')]",
@@ -72,7 +79,7 @@
 			"name": "PhotoDNAMonitoring",
 			"type": "functions",
 			"dependsOn": [
-				"[variables('storageAccountName')]"
+				"[variables('storageAccountSubscriptionId')]"
 			],
 			"properties": {
 				"config": {
@@ -88,11 +95,11 @@
 				"appSettings": [
 					{
 						"name": "AzureWebJobsDashboard",
-						"value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listKeys(variables('storageAccountid'),'2015-05-01-preview').key1)]"
+						"value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountSubscriptionId'), ';AccountKey=', listKeys(variables('storageAccountSubscriptionId'),'2015-05-01-preview').key1)]"
 					},
 					{
 						"name": "AzureWebJobsStorage",
-						"value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listKeys(variables('storageAccountid'),'2015-05-01-preview').key1)]"
+						"value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountSubscriptionId'), ';AccountKey=', listKeys(variables('storageAccountSubscriptionId'),'2015-05-01-preview').key1)]"
 					},
 					{
 						"name": "senderEmail",
@@ -121,33 +128,22 @@
 			}
 		},
 		{
-			"name": "[variables('pdnaStorageAccountName')]",
-			"type": "Microsoft.Storage/storageAccounts",
-			"location": "[resourceGroup().location]",
-			"apiVersion": "2016-01-01",
-			"sku": {
-				"name": "[parameters('pdnaStorageAccountType')]"
-			},
-			"dependsOn": [],
-			"tags": {
-				"displayName": "pdnaStorageAccount"
-			},
-			"kind": "Storage"
-		},
-		{
 			"apiVersion": "2015-08-01",
 			"name": "appsettings",
 			"type": "config",
-				"dependsOn": [
-					"[resourceId('Microsoft.Web/Sites', parameters('pdnaStorageAccountName'))]",
-					"[resourceId('Microsoft.Web/Sites/sourcecontrols', parameters('pdnaStorageAccountName'), 'web')]",
-					"[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]"
-				],
+			"dependsOn": [
+				"[resourceId('Microsoft.Web/Sites', parameters('storageAccountName'))]",
+				"[resourceId('Microsoft.Web/Sites/sourcecontrols', parameters('storageAccountName'), 'web')]",
+				"[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]"
+			],
 			"properties": {
-				"AzureWebJobsStorage": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listKeys(variables('storageAccountid'),'2015-05-01-preview').key1)]",
-				"AzureWebJobsDashboard": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listKeys(variables('storageAccountid'),'2015-05-01-preview').key1)]"
+				"AzureWebJobsStorage": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listKeys(variables('storageAccountSubscriptionId'),'2015-05-01-preview').key1)]",
+				"AzureWebJobsDashboard": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listKeys(variables('storageAccountSubscriptionId'),'2015-05-01-preview').key1)]"
 			}
-		},
-		"outputs",
+		}
+
+	],
+		"outputs":
 		{}
+
 }
