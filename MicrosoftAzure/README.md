@@ -16,7 +16,7 @@ To being the process simply click
 - **Receiver Email:** An email address that receives a notification when PhotoDNA finds *unacceptable* content. This address also receives notification when an error occurs during monitoring.
 - **Sender Email**: An email address from which the notifications will be sent.
 - **Storage Account Name:** The Name of the storage account resource group that this app will be added to, the same as the one selected from the drop down above labeled "Resource Group"
-- **Storage Account Subscription ID:** The Unique Identifying number given to the account, you should find the string here: (picture of resource group details)
+- **Target Storage Blob Name:** This should be the name of the Storage blob that will be monitored. Uploading to this blob will trigger the function to scan all upload images.
 - **Subscription Endpoint:** A URL that was provided to you when you subscribed to Microsoft PhotoDNA. This is the URL to which your images will be uploaded and scanned. This URL is specific to your subscription. To find your personal PDNA Endpoint, [visit this page](https://testpdnaui.azurewebsites.net/).  
 - **Subscription Key:** A unique key that was provided to you when you subscribed to Microsoft PhotoDNA. This key is specific to your subscription, and should not be shared with other users. To find your personal PDNA key, [visit this page](https://testpdnaui.azurewebsites.net/ )  
 
@@ -24,5 +24,14 @@ Once the parameters have been added and you have verified they are correct, Acce
 
 Once the Resource Group has completed Deployment, navigate to your accounts **Function App Tab** and select the newly created app name. 
 Once on the landing page, Select the** Platomm Features **Tab, then Select **"App Service Editor"** near the bottom.
+![](https://github.com/MicrosoftContentModerator/PhotoDNA-QuickStarts/blob/dev/MicrosoftAzure/Documentation/FunctionAppNavigation.PNG?raw=true)
 
-Select Upload Files and Upload the following to your function app... TODO
+Once the App Service Editor has loaded you can upload the function deployment package to the Function App by hovering over the WWWROOT label and clicking the "more" menu (marked "...") and then select **Upload Files**
+
+![](https://github.com/MicrosoftContentModerator/PhotoDNA-QuickStarts/blob/dev/MicrosoftAzure/Documentation/UploadZip.png?raw=true)
+
+Once the .ZIP has been uploaded, right click it and select **Extract All**
+![](https://github.com/MicrosoftContentModerator/PhotoDNA-QuickStarts/blob/dev/MicrosoftAzure/Documentation/ZipExtract.png?raw=true)
+
+This concludes the setup of PhotoDNAs Monitoring function application.
+

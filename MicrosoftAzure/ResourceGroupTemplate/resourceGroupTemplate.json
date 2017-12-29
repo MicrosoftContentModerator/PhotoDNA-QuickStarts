@@ -14,17 +14,6 @@
 				"description": "name of the new function that will be created"
 			}
 		},
-		"pdnaStorageAccountType": {
-			"type": "string",
-			"defaultValue": "Standard_LRS",
-			"allowedValues": [
-				"Standard_LRS",
-				"Standard_ZRS",
-				"Standard_GRS",
-				"Standard_RAGRS",
-				"Premium_LRS"
-			]
-		},
 		"receiverEmail": {
 			"type": "string",
 			"metadata": {
