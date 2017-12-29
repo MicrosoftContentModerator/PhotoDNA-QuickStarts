@@ -29,7 +29,7 @@ namespace FunctionApp1
 		static string callbackEndpoint = System.Environment.GetEnvironmentVariable("callbackEndpoint");
 
 		[FunctionName("Function_1")]
-		public static async void Run([BlobTrigger("allyispictureuploadfolder/{name}.{ext}", Connection = "AzureWebJobsStorage")]Stream input, string name, string ext, TraceWriter log)
+		public static async void Run(Stream input, string name, string ext, TraceWriter log)
 		{
 			byte[] file = new byte[input.Length];
 			file = ReadFully(input);

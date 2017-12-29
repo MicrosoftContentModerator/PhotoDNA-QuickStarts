@@ -43,10 +43,10 @@
 				"description": "the name of the storage account that will be monitored by the function app"
 			}
 		},
-		"storageAccountSubscriptionId": {
+		"targetStorageBlobName": {
 			"type": "string",
 			"metadata": {
-				"description": "the key of the storage account that will be monitored by the function app, get the key here: TODO"
+				"description": "the name of the storage blob that will be monitored by the function app"
 			}
 		},
 		"subscriptionEndpoint": {
@@ -65,7 +65,7 @@
 	"variables": {
 		"pdnaStorageAccountName": "[concat('pdnaStorageAccount', uniqueString(resourceGroup().id))]",
 		"functionAppName": "[parameters('functionAppName')]",
-		"storageAccountSubscriptionId": "[parameters('storageAccountSubscriptionId')]",
+		"targetStorageBlobName": "[parameters('targetStorageBlobName')]",
 		"storageAccountName": "[parameters('storageAccountName')]",
 		"senderEmail": "[parameters('senderEmail')]",
 		"receiverEmail": "[parameters('receiverEmail')]",
@@ -87,7 +87,7 @@
 										"name": "req",
 										"type": "blobTrigger",
 										"direction": "in",
-										"path": "allyispictureuploadfolder/{name}",
+										"path": "[parameters('targetStorageBlobName')]/{name}",
 										"connection": "AzureWebJobsStorage"
 									}
 								]

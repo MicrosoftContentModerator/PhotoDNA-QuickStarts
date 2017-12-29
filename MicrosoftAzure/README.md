@@ -6,7 +6,7 @@ This guide will lead you through the deployment of PhotoDNA Monitoring to your e
 ![Simple Diagram](https://github.com/MicrosoftContentModerator/PhotoDNA-QuickStarts/blob/dev/MicrosoftAzure/Documentation/SimpleArchDiagramAZ_placeholder.png?raw=true)
 
 To being the process simply click
-[Launch](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fgithub.com%2FMicrosoftContentModerator%2FPhotoDNA-QuickStarts%2FMicrosoftAzure%2FResourceGroupTemplate%2FresourceGroupTemplate.json "Deploy in Azure"). This will bring you to your Microsoft Azure account console deployment page. Fill out some information about your target Resource Group and PhotoDNA Subscription
+[Launch](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FMicrosoftContentModerator%2FPhotoDNA-QuickStarts%2Fdev%2FMicrosoftAzure%2FResourceGroupTemplate%2FresourceGroupTemplate.json "Deploy in Azure"). This will bring you to your Microsoft Azure account console deployment page. Fill out some information about your target Resource Group and PhotoDNA Subscription
 
 ![](https://github.com/MicrosoftContentModerator/PhotoDNA-QuickStarts/blob/dev/MicrosoftAzure/Documentation/TemplateLandingPage.PNG?raw=true)
 
