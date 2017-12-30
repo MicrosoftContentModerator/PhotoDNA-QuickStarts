@@ -1,7 +1,7 @@
 ## Azure Resource Deployment Guide ##
 
 
-This guide will lead you through the deployment of PhotoDNA Monitoring to your existing Blob-Storage accounts. This following template will create a Azure Function Application along with supporting resources that will allow that automatic monitoring of image uploads to your storage databases, checking their content for inappropriate content and letting you know if PhotoDNA finds anything suspicious.
+This guide will lead you through the deployment of PhotoDNA Monitoring to your existing Blob-Storage accounts. This following template will create a Azure Function Application along with supporting resources that will allow that automatic monitoring of image uploads to your storage databases, checking their content for inappropriate content and letting you know if PhotoDNA finds anything suspicious. Before you start, download the following .ZIP folder and save it to a location you can access easily later on. 
 
 ![Simple Diagram](https://github.com/MicrosoftContentModerator/PhotoDNA-QuickStarts/blob/dev/MicrosoftAzure/Documentation/SimpleArchDiagramAZ_placeholder.png?raw=true)
 
@@ -33,5 +33,9 @@ Once the App Service Editor has loaded you can upload the function deployment pa
 Once the .ZIP has been uploaded, right click it and select **Extract All**
 ![](https://github.com/MicrosoftContentModerator/PhotoDNA-QuickStarts/blob/dev/MicrosoftAzure/Documentation/ZipExtract.png?raw=true)
 
-This concludes the setup of PhotoDNAs Monitoring function application.
 
+It might take a few minutes for these new files to be installed properly, once they are completed, navigate back to the Function App Overview and expand the tab for the newly created Function_1. Select the Integrate tab and you should see the following page. You must change the **Path** to have your targeted blob's name instead of the placeholder value (keep the "**/{name}.{ext}**" and just replace the text in front of the **/**).
+![](https://github.com/MicrosoftContentModerator/PhotoDNA-QuickStarts/blob/dev/MicrosoftAzure/Documentation/IntegrationPage.PNG?raw=true)
+
+
+Allow the function to update for a minute or two and once the new target is updated your blob will be automatically monitored by PhotoDNA
