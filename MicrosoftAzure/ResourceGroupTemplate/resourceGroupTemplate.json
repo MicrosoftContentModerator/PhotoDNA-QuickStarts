@@ -140,7 +140,16 @@
 								],
 								"properties": {
 									"AzureWebJobsStorage": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')),'2015-05-01-preview').key1)]",
-									"AzureWebJobsDashboard": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')),'2015-05-01-preview').key1)]"
+									"AzureWebJobsDashboard": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')),'2015-05-01-preview').key1)]",
+                  "pdnaStorageAccountName": "[concat('pdnaStorageAccount', uniqueString(resourceGroup().id))]",
+                  "functionAppName": "[parameters('functionAppName')]",
+                  "targetStorageBlobName": "[parameters('targetStorageBlobName')]",
+                  "storageAccountName": "[parameters('targetStorageAccountName')]",
+                  "senderEmail": "[parameters('senderEmail')]",
+                  "receiverEmail": "[parameters('receiverEmail')]",
+                  "subscriptionEndpoint": "[parameters('subscriptionEndpoint')]",
+                  "subscriptionKey": "[parameters('subscriptionKey')]",
+                  "callbackEndpoint": "[parameters('callbackEndpoint')]"
 								}
 							}
 						],
