@@ -8,12 +8,6 @@
 				"description": "the name of the storage account that will be monitored by the function app"
 			}
 		},
-		"targetStorageBlobName": {
-			"type": "string",
-			"metadata": {
-				"description": "the name of the storage blob that will be monitored by the function app"
-			}
-		},
 		"functionAppName": {
 			"type": "string",
 			"metadata": {
@@ -29,7 +23,7 @@
 		"smtpPassword": {
 			"type": "string",
 			"metadata": {
-				"description": "The password created by SimpleMail, find your password here: TODO "
+				"description": "The password created for your specific user for Simple Mail"
 			}
 		},
 		"smtpUserName": {
@@ -70,15 +64,16 @@
 		}
 	},
 	"variables": {
-		"pdnaStorageAccountName": "[concat('pdnaStorageAccount', uniqueString(resourceGroup().id))]",
 		"functionAppName": "[parameters('functionAppName')]",
-		"targetStorageBlobName": "[parameters('targetStorageBlobName')]",
 		"storageAccountName": "[parameters('targetStorageAccountName')]",
 		"senderEmail": "[parameters('senderEmail')]",
 		"receiverEmail": "[parameters('receiverEmail')]",
 		"subscriptionEndpoint": "[parameters('subscriptionEndpoint')]",
 		"subscriptionKey": "[parameters('subscriptionKey')]",
-		"callbackEndpoint": "[parameters('callbackEndpoint')]"
+    "callbackEndpoint": "[parameters('callbackEndpoint')]",
+    "smtpHostAddress": "[parameters('smtpHostAddress')]",
+    "smtpPassword": "[parameters('smtpPassword')]",
+    "smtpUserName": "[parameters('smtpUserName')]"
 	},
 	"resources": [
 					{
@@ -94,7 +89,7 @@
 										"name": "req",
 										"type": "blobTrigger",
 										"direction": "in",
-										"path": "[parameters('targetStorageBlobName')]/{name}.{ext}",
+										"path": "YourBlobNameHere/{name}.{ext}",
 										"connection": "AzureWebJobsStorage"
 									}
 								]
@@ -104,9 +99,18 @@
 									"name": "AzureWebJobsDashboard",
 									"value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')),'2015-05-01-preview').key1)]"
 								},
+                {
+                  "name": "AzureWebJobsStorage",
+                  "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')),'2015-05-01-preview').key1)]"
+                },
+                {
+                  "name": "storageAccountName",
+                  "value": "variables('storageAccountName')"
+
+                },
 								{
-									"name": "AzureWebJobsStorage",
-									"value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')),'2015-05-01-preview').key1)]"
+									"name": "functionAppName",
+									"value": "variables('functionAppName')"
 								},
 								{
 									"name": "senderEmail",
@@ -127,6 +131,18 @@
 								{
 									"name": "callbackEndpoint",
 									"value": "variables('callbackEndpoint')"
+								},
+								{
+									"name": "smtpHostAddress",
+									"value": "variables('smtpHostAddress')"
+								},
+								{
+									"name": "smtpPassword",
+									"value": "variables('smtpPassword')"
+								},
+								{
+									"name": "smtpUserName",
+									"value": "variables('smtpUserName')"
 								}
 							]
 						},
@@ -141,15 +157,16 @@
 								"properties": {
 									"AzureWebJobsStorage": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')),'2015-05-01-preview').key1)]",
 									"AzureWebJobsDashboard": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')),'2015-05-01-preview').key1)]",
-                  "pdnaStorageAccountName": "[concat('pdnaStorageAccount', uniqueString(resourceGroup().id))]",
                   "functionAppName": "[parameters('functionAppName')]",
-                  "targetStorageBlobName": "[parameters('targetStorageBlobName')]",
                   "storageAccountName": "[parameters('targetStorageAccountName')]",
                   "senderEmail": "[parameters('senderEmail')]",
                   "receiverEmail": "[parameters('receiverEmail')]",
                   "subscriptionEndpoint": "[parameters('subscriptionEndpoint')]",
                   "subscriptionKey": "[parameters('subscriptionKey')]",
-                  "callbackEndpoint": "[parameters('callbackEndpoint')]"
+                  "callbackEndpoint": "[parameters('callbackEndpoint')]",
+                  "smtpHostAddress": "[parameters('smtpHostAddress')]",
+                  "smtpPassword": "[parameters('smtpPassword')]",
+                  "smtpUserName": "[parameters('smtpUserName')]"
 								}
 							}
 						],

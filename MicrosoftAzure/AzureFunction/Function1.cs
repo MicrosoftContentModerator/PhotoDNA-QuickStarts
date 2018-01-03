@@ -17,17 +17,6 @@ namespace FunctionApp1
 
 		static HashSet<string> SupportedImageTypes { get; } = new HashSet<string> { "png", "gif", "jpeg", "jpg", "tiff", "bmp" };
 
-		static string MatchEmailSubject = "Azure Image Content Warning from PhotoDNA";
-
-		static string MatchEmailBody = "An image was uploaded to Azure which was flagged for innapropiate content by PhotoDNA";
-
-		//TODO delete all this
-		static string subscriptionKey = System.Environment.GetEnvironmentVariable("subscriptionKey");
-		static string subscriptionEndpoint = System.Environment.GetEnvironmentVariable("subscriptionEndpoint");
-		static string senderEmail = System.Environment.GetEnvironmentVariable("senderEmail");
-		static string receiverEmail = System.Environment.GetEnvironmentVariable("receiverEmail");
-		static string callbackEndpoint = System.Environment.GetEnvironmentVariable("callbackEndpoint");
-
 		[FunctionName("Function_1")]
 		public static async void Run([BlobTrigger("/{name}.{ext}", Connection = "AzureWebJobsStorage")]Stream input, string name, string ext, TraceWriter log)
 		{
@@ -61,11 +50,11 @@ namespace FunctionApp1
 				// Request headers
 				
 				//client.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", System.Environment.GetEnvironmentVariable("subscriptionKey"));
-				client.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", subscriptionKey);
+				client.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", System.Environment.GetEnvironmentVariable("subscriptionKey", EnvironmentVariableTarget.Process));
 
 				// Request parameters
 				//var uri = System.Environment.GetEnvironmentVariable("subscriptionEndpoint");
-				var uri = subscriptionEndpoint;
+				var uri = System.Environment.GetEnvironmentVariable("subscriptionEndpoint", EnvironmentVariableTarget.Process);
 
 				MediaTypeHeaderValue contentType;
 
@@ -115,16 +104,16 @@ namespace FunctionApp1
 
 					if (obj.IsMatch == "True")
 					{
-						log.Verbose("!!  ----  ----  FOUND MATCH for img: ");
+						log.Verbose("!!  ----  ----  FOUND MATCH for img: " + name + "." + ext);
 						await MailNotification(response, name, log);
 					}
 					else if (obj.IsMatch == "False")
 					{
-						log.Verbose("..  ----  ----  NO MATCH FOUND for img: ");
+						log.Verbose("..  ----  ----  NO MATCH FOUND for img: " + name + "." + ext);
 					}
 					else
 					{
-						log.Verbose(".!!  ----  ----  ERROR for img: ");
+						log.Verbose(".!!  ----  ----  ERROR for img: " + name + "." + ext);
 						string err = (" .. the proper response was not found" + obj);
 						await MailNotificationError(await response.Content.ReadAsStringAsync(), log);
 						throw new Exception(" .. the proper response was not found" + obj);
@@ -160,7 +149,7 @@ namespace FunctionApp1
 					// post json
 					content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
 					//var postResponse = await postClient.PostAsync(System.Environment.GetEnvironmentVariable("callbackEndpoint"), jsonResponse);
-					response = await postClient.PostAsync(callbackEndpoint, content);
+					response = await postClient.PostAsync(System.Environment.GetEnvironmentVariable("callbackEndpoint", EnvironmentVariableTarget.Process), content);
 				}
 
 			}
@@ -175,15 +164,15 @@ namespace FunctionApp1
 
 				//string fromEmail = System.Environment.GetEnvironmentVariable("senderEmail");
 				//string toEmail = System.Environment.GetEnvironmentVariable("receiverEmail");
-				string fromEmail = senderEmail;
-				string toEmail = receiverEmail;
+				string fromEmail = System.Environment.GetEnvironmentVariable("senderEmail", EnvironmentVariableTarget.Process);
+				string toEmail = System.Environment.GetEnvironmentVariable("receiverEmail", EnvironmentVariableTarget.Process);
 				int smtpPort = 587;
 				bool smtpEnableSsl = true;
-				string smtpHost = "	smtp.sendgrid.net"; // your smtp host
-				string smtpUser = "apikey"; // your smtp user
-				string smtpPass = "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"; // your smtp password
-				string subject = MatchEmailSubject;
-				string messageBody = MatchEmailBody + "    the image file: " + name;
+				string smtpHost = System.Environment.GetEnvironmentVariable("smtpHostAddress", EnvironmentVariableTarget.Process); // your smtp host
+				string smtpUser = System.Environment.GetEnvironmentVariable("smtpUserName", EnvironmentVariableTarget.Process); // your smtp user
+				string smtpPass = System.Environment.GetEnvironmentVariable("smtpPassword", EnvironmentVariableTarget.Process); // your smtp password
+				string subject = "Azure Image Content Warning from PhotoDNA";
+				string messageBody = "An image was uploaded to Azure which was flagged for innapropiate content by PhotoDNA...  the image file: " + name;
 
 				MailMessage mail = new MailMessage(fromEmail, toEmail);
 				SmtpClient client = new SmtpClient();
@@ -207,7 +196,12 @@ namespace FunctionApp1
 				catch (Exception ex)
 				{
 					log.Verbose("!!  ERROR ----  ---- The email was not sent.");
-					log.Verbose("!!  ERROR ----  ---- Error message: " + ex.Message);
+					log.Verbose("!!  ERROR ----  ---- Error message: " + ex.Message + "| | |" + ex.StackTrace);
+					while(ex.InnerException != null)
+					{
+						log.Verbose("!!  ERROR ----  ---- Error message: " + ex.Message + "| | |" + ex.StackTrace);
+						ex = ex.InnerException;
+					}
 				}
 			}
 			catch (Exception ex)
@@ -232,7 +226,7 @@ namespace FunctionApp1
 					// post json
 					content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
 					//var postResponse = await postClient.PostAsync(System.Environment.GetEnvironmentVariable("callbackEndpoint"), jsonResponse);
-					response = await postClient.PostAsync(callbackEndpoint, content);
+					response = await postClient.PostAsync(System.Environment.GetEnvironmentVariable("callbackEndpoint", EnvironmentVariableTarget.Process), content);
 				}
 			}
 			catch (Exception ex)
@@ -246,13 +240,13 @@ namespace FunctionApp1
 
 				//string fromEmail = System.Environment.GetEnvironmentVariable("senderEmail");
 				//string toEmail = System.Environment.GetEnvironmentVariable("receiverEmail");
-				string fromEmail = senderEmail;
-				string toEmail = receiverEmail;
+				string fromEmail = System.Environment.GetEnvironmentVariable("senderEmail", EnvironmentVariableTarget.Process);
+				string toEmail = System.Environment.GetEnvironmentVariable("receiverEmail", EnvironmentVariableTarget.Process);
 				int smtpPort = 587;
 				bool smtpEnableSsl = true;
-				string smtpHost = "	smtp.sendgrid.net"; // your smtp host
-				string smtpUser = "apikey"; // your smtp user
-				string smtpPass = "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"; // your smtp password
+				string smtpHost = System.Environment.GetEnvironmentVariable("smtpHostAddress", EnvironmentVariableTarget.Process); // your smtp host
+				string smtpUser = System.Environment.GetEnvironmentVariable("smtpUserName", EnvironmentVariableTarget.Process); // your smtp user
+				string smtpPass = System.Environment.GetEnvironmentVariable("smtpPassword", EnvironmentVariableTarget.Process); // your smtp password
 				string subject = "Error was thrown by PhotoDNA Monitoring";
 				string messageBody = "An error was thrown attempting to scan an object uploaded to your blob storage account. This is an example email";
 
