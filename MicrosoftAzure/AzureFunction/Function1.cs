@@ -9,6 +9,9 @@ using Microsoft.Azure.WebJobs;
 using Newtonsoft.Json;
 using Microsoft.Azure.WebJobs.Host;
 using System.Text;
+using Microsoft.WindowsAzure.Storage;
+using Microsoft.Azure;
+using Microsoft.WindowsAzure.Storage.Queue;
 
 namespace FunctionApp1
 {
@@ -20,10 +23,35 @@ namespace FunctionApp1
 		[FunctionName("Function_1")]
 		public static async void Run([BlobTrigger("/{name}.{ext}", Connection = "AzureWebJobsStorage")]Stream input, string name, string ext, TraceWriter log)
 		{
+			CloudStorageAccount storageAccount = CloudStorageAccount.Parse(CloudConfigurationManager.GetSetting("StorageConnectionString"));
+
+			// Create the queue client.
+			CloudQueueClient queueClient = storageAccount.CreateCloudQueueClient();
+
+			// Retrieve a reference to a queue.
+			CloudQueue queue = queueClient.GetQueueReference("testqueuepleaseignore");
+
+			queue.FetchAttributes();
+			var count = queue.ApproximateMessageCount;
+
+			while (count > 0) //loop, if queue has message, wait 1 second, ask again
+			{
+				log.Verbose("Waiting...");
+				System.Threading.Thread.Sleep(500);
+				queue.FetchAttributes();
+				count = queue.ApproximateMessageCount;
+			}
+			CloudQueueMessage message = new CloudQueueMessage("running...");
+			queue.AddMessage(message);
+
 			byte[] file = new byte[input.Length];
 			file = ReadFully(input);
 			
+			//remove the running message after completion
 			await MakeRequest(file, name, ext, log);
+
+			CloudQueueMessage mess = queue.GetMessages(1).GetEnumerator().Current;
+			queue.DeleteMessage(mess);
 		}
 
 		public static byte[] ReadFully(Stream input)
