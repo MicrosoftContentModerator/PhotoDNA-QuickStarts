@@ -1,7 +1,9 @@
 ## Azure Resource Deployment Guide ##
 
 
-This guide will lead you through the deployment of PhotoDNA Monitoring to your existing Blob-Storage accounts. This following template will create a Azure Function Application along with supporting resources that will allow that automatic monitoring of image uploads to your storage databases, checking their content for inappropriate content and letting you know if PhotoDNA finds anything suspicious. Before you start, download the following .ZIP folder and save it to a location you can access easily later on. 
+This guide will lead you through the deployment of PhotoDNA Monitoring to your existing Blob-Storage accounts. This following template will create a Azure Function Application along with supporting resources that will allow that automatic monitoring of image uploads to your storage databases, checking their content for inappropriate content and letting you know if PhotoDNA finds anything suspicious. 
+
+**Before you start** you must complete the following two steps: **download the following [.ZIP folder](https://github.com/MicrosoftContentModerator/PhotoDNA-QuickStarts/raw/dev/MicrosoftAzure/AzureFunction/PDNAMonitor.zip)** and save it to a location you can access easily later on, and also you must **register for a SMTP mailing service** such as SendGrid. The function app required an active SMTP user name and password to send emails to you when potential matches are found in PDNAs database.  
 
 ![Simple Diagram](https://github.com/MicrosoftContentModerator/PhotoDNA-QuickStarts/blob/dev/MicrosoftAzure/Documentation/SimpleArchDiagramAZ_placeholder.png?raw=true)
 
