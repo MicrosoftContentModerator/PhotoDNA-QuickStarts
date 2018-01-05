@@ -30,7 +30,7 @@ namespace FunctionApp1
 			while ((DateTime.Now.Subtract(invocationTime)).Seconds < timeout)
 			{
 				var batch = await receiver.ReceiveBatchAsync(10);
-
+				if (batch == null) break;
 				List<Task> taskList = new List<Task>();
 				
 				foreach(var mess in batch)
@@ -61,13 +61,14 @@ namespace FunctionApp1
 						await mess.DeadLetterAsync();
 					}
 
+					await Task.Delay(100);
 					//remove the running message after completion
 				}
-
-				taskList.Add(Task.Delay(1000));
-
+				
 				await Task.WhenAll(taskList);
 			}
+
+
 		}
 
 		/*public static byte[] ReadFully(Stream input)
@@ -154,18 +155,31 @@ namespace FunctionApp1
 				}
 				catch (Exception ex)
 				{
-					string err = ("And Error was thrown trying to send Json to the PDNA subscription endpoint: " + ex.Message);
+					string err = ("And Error was thrown trying to send Json to the PDNA subscription endpoint: " + GetAllMessage(ex));
 					await MailNotificationError(err, log);
-					log.Verbose("And Error was thrown trying to send Json to the PDNA subscription endpoint: " + ex.Message);
+					log.Verbose("And Error was thrown trying to send Json to the PDNA subscription endpoint: " + GetAllMessage(ex));
 				}
 
 			}
 			catch (Exception ex)
 			{
-				string err = (" An error has occured while attempting to send the image request to PDNA, Exception:  " + ex.Message);
+				string err = (" An error has occured while attempting to send the image request to PDNA, Exception:  " + GetAllMessage(ex));
 				await MailNotificationError(err, log);
-				log.Verbose(" An error has occured while attempting to send the image request to PDNA, Exception:  " + ex.Message);
+				log.Verbose(" An error has occured while attempting to send the image request to PDNA, Exception:  " + GetAllMessage(ex));
 			}
+		}
+
+		static string GetAllMessage(Exception ex)
+		{
+			string s = ex.Message;
+			s += "  TYPE: " + ex.GetType().ToString();
+			while(ex.InnerException != null)
+			{
+				s += " INNER: " + ex.InnerException.Message;
+				ex = ex.InnerException;
+			}
+			
+			return s;
 		}
 
 		private static async Task MailNotification(HttpResponseMessage message, string name, TraceWriter log)

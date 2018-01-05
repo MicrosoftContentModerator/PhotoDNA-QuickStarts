@@ -32,16 +32,16 @@
 				"description": "The user name used to create you Simple Mail account"
 			}
 		},
-		"receiverEmail": {
-			"type": "string",
-			"metadata": {
-				"description": "The email that will receive notificaitons when PhotoDNA happens to find a match on images uploaded to your storage"
-			}
-		},
-		"senderEmail": {
+		"notificationSenderEmail": {
 			"type": "string",
 			"metadata": {
 				"description": "The email account that will be used to send the notification emails."
+			}
+		},
+		"notificationReceiverEmail": {
+			"type": "string",
+			"metadata": {
+				"description": "The email that will receive notificaitons when PhotoDNA happens to find a match on images uploaded to your storage"
 			}
 		},
 		"PhotoDNASubscriptionEndpoint": {
@@ -66,8 +66,8 @@
 	"variables": {
 		"functionAppName": "[parameters('functionAppName')]",
 		"storageAccountName": "[parameters('targetStorageAccountName')]",
-		"senderEmail": "[parameters('senderEmail')]",
-		"receiverEmail": "[parameters('receiverEmail')]",
+		"senderEmail": "[parameters('notificationSenderEmail')]",
+		"receiverEmail": "[parameters('notificationReceiverEmail')]",
 		"subscriptionEndpoint": "[parameters('PhotoDNASubscriptionEndpoint')]",
 		"subscriptionKey": "[parameters('PhotoDNASubscriptionKey')]",
     "callbackEndpoint": "[parameters('callbackEndpoint')]",
@@ -213,8 +213,8 @@
 									"AzureWebJobsDashboard": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')),'2015-05-01-preview').key1)]",
                   "functionAppName": "[parameters('functionAppName')]",
                   "storageAccountName": "[parameters('targetStorageAccountName')]",
-                  "senderEmail": "[parameters('senderEmail')]",
-                  "receiverEmail": "[parameters('receiverEmail')]",
+                  "senderEmail": "[parameters('notificationSenderEmail')]",
+                  "receiverEmail": "[parameters('notificationReceiverEmail')]",
                   "subscriptionEndpoint": "[parameters('PhotoDNASubscriptionEndpoint')]",
                   "subscriptionKey": "[parameters('PhotoDNASubscriptionKey')]",
                   "callbackEndpoint": "[parameters('callbackEndpoint')]",
