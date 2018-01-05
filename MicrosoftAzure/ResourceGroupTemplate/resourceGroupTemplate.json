@@ -11,7 +11,7 @@
 		"functionAppName": {
 			"type": "string",
 			"metadata": {
-				"description": "name of the new function that will be created"
+				"description": "name your new function that will be created"
 			}
 		},
 		"smtpHostAddress": {
@@ -44,13 +44,13 @@
 				"description": "The email account that will be used to send the notification emails."
 			}
 		},
-		"subscriptionEndpoint": {
+		"PhotoDNASubscriptionEndpoint": {
 			"type": "string",
 			"metadata": {
 				"description": "Your unique PhotoDNA endpoint addess this can be found here: "
 			}
 		},
-		"subscriptionKey": {
+		"PhotoDNASubscriptionKey": {
 			"type": "string",
 			"metadata": {
 				"description": "Your unique PhotoDNA subscription key, this can be found here: "
@@ -68,15 +68,69 @@
 		"storageAccountName": "[parameters('targetStorageAccountName')]",
 		"senderEmail": "[parameters('senderEmail')]",
 		"receiverEmail": "[parameters('receiverEmail')]",
-		"subscriptionEndpoint": "[parameters('subscriptionEndpoint')]",
-		"subscriptionKey": "[parameters('subscriptionKey')]",
+		"subscriptionEndpoint": "[parameters('PhotoDNASubscriptionEndpoint')]",
+		"subscriptionKey": "[parameters('PhotoDNASubscriptionKey')]",
     "callbackEndpoint": "[parameters('callbackEndpoint')]",
     "smtpHostAddress": "[parameters('smtpHostAddress')]",
     "smtpPassword": "[parameters('smtpPassword')]",
-    "smtpUserName": "[parameters('smtpUserName')]"
+    "smtpUserName": "[parameters('smtpUserName')]",
+    "imageQueueName": "PDNAMonitoringImageQueue",
+    "serviceBusNamespace": "PDNAMonitoringServiceBus",
+    "defaultSASKeyName": "RootManageSharedAccessKey",
+    "authRuleResourceId": "[resourceId('Microsoft.ServiceBus/namespaces/authorizationRules', 'PDNAMonitoringServiceBus', 'RootManageSharedAccessKey')]",
+	  "sbVersion": "2017-04-01"
+
 	},
 	"resources": [
-					{
+    {
+      "type": "Microsoft.ServiceBus/namespaces",
+      "sku": {
+        "name": "Basic",
+        "tier": "Basic"
+      },
+      "name": "PDNAMonitoringServiceBus",
+      "apiVersion": "2017-04-01",
+      "location": "Central US",
+      "tags": { },
+      "scale": null,
+      "properties": {
+        "provisioningState": "Created",
+        "metricId": "[concat('2a154f79-8247-4a91-b95b-bd68f15b46d0:pdnamonitoringservicebus', 'PDNAMonitoringServiceBus')]",
+        "createdAt": "2018-01-04T22:22:46.09Z",
+        "updatedAt": "2018-01-04T22:22:46.09Z",
+        "serviceBusEndpoint": "[concat('https://', 'PDNAMonitoringServiceBus','.servicebus.windows.net:443/')]"
+      },
+      "dependsOn": [ ]
+    },
+    {
+          "comments": "Generalized from resource: '/subscriptions/2a154f79-8247-4a91-b95b-bd68f15b46d0/resourcegroups/NEW/providers/Microsoft.ServiceBus/namespaces/PDNAMonitoringServiceBus/queues/imagequeue'.",
+          "type": "Microsoft.ServiceBus/namespaces/queues",
+          "name": "[concat('PDNAMonitoringServiceBus', '/', 'PDNAMonitoringImageQueue')]",
+          "apiVersion": "2017-04-01",
+          "location": "Central US",
+          "scale": null,
+          "properties": {
+              "maxSizeInMegabytes": 1024,
+              "requiresDuplicateDetection": false,
+              "requiresSession": false,
+              "defaultMessageTimeToLive": "P1D",
+              "deadLetteringOnMessageExpiration": true,
+              "status": "Active",
+              "enablePartitioning": false,
+              "enableExpress": false,
+              "countDetails": {
+                  "activeMessageCount": 0,
+                  "deadLetterMessageCount": 0,
+                  "scheduledMessageCount": 0,
+                  "transferMessageCount": 0,
+                  "transferDeadLetterMessageCount": 0
+              }
+          },
+          "dependsOn": [
+              "[resourceId('Microsoft.ServiceBus/namespaces', 'PDNAMonitoringServiceBus')]"
+          ]
+      },			
+        {
 						"apiVersion": "2016-08-01",
 						"kind": "functionapp",
 						"name": "[parameters('functionAppName')]",
@@ -161,12 +215,14 @@
                   "storageAccountName": "[parameters('targetStorageAccountName')]",
                   "senderEmail": "[parameters('senderEmail')]",
                   "receiverEmail": "[parameters('receiverEmail')]",
-                  "subscriptionEndpoint": "[parameters('subscriptionEndpoint')]",
-                  "subscriptionKey": "[parameters('subscriptionKey')]",
+                  "subscriptionEndpoint": "[parameters('PhotoDNASubscriptionEndpoint')]",
+                  "subscriptionKey": "[parameters('PhotoDNASubscriptionKey')]",
                   "callbackEndpoint": "[parameters('callbackEndpoint')]",
                   "smtpHostAddress": "[parameters('smtpHostAddress')]",
                   "smtpPassword": "[parameters('smtpPassword')]",
-                  "smtpUserName": "[parameters('smtpUserName')]"
+                  "smtpUserName": "[parameters('smtpUserName')]",
+                  "NamespaceConnectionString": "[listkeys(variables('authRuleResourceId'), variables('sbVersion')).primaryConnectionString]",
+                  "imageQueueName": "PDNAMonitoringImageQueue"
 								}
 							}
 						],

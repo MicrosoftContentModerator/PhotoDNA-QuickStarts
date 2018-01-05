@@ -9,52 +9,68 @@ using Microsoft.Azure.WebJobs;
 using Newtonsoft.Json;
 using Microsoft.Azure.WebJobs.Host;
 using System.Text;
-using Microsoft.WindowsAzure.Storage;
-using Microsoft.Azure;
-using Microsoft.WindowsAzure.Storage.Queue;
+using Microsoft.WindowsAzure.Storage.Blob;
+using Microsoft.ServiceBus.Messaging;
 
 namespace FunctionApp1
 {
 	public static class Function1
     {
 
-		static HashSet<string> SupportedImageTypes { get; } = new HashSet<string> { "png", "gif", "jpeg", "jpg", "tiff", "bmp" };
+		static HashSet<string> SupportedImageTypes { get; } = new HashSet<string> { ".png", ".gif", ".jpeg", ".jpg", ".tiff", ".bmp" };
+		static int timeout = 280;
 
-		[FunctionName("Function_1")]
-		public static async void Run([BlobTrigger("/{name}.{ext}", Connection = "AzureWebJobsStorage")]Stream input, string name, string ext, TraceWriter log)
+		[FunctionName("PDNAMonitoring")]
+		public static async void Run([TimerTrigger("0 */5 * * * *")]TimerInfo myTimer, TraceWriter log)
 		{
-			CloudStorageAccount storageAccount = CloudStorageAccount.Parse(CloudConfigurationManager.GetSetting("StorageConnectionString"));
+			DateTime invocationTime = DateTime.Now;
+			var receiverFactory = MessagingFactory.CreateFromConnectionString(System.Environment.GetEnvironmentVariable("NamespaceConnectionString", EnvironmentVariableTarget.Process));
+			var receiver = await receiverFactory.CreateMessageReceiverAsync("PDNAMonitoringImageQueue", ReceiveMode.PeekLock);
 
-			// Create the queue client.
-			CloudQueueClient queueClient = storageAccount.CreateCloudQueueClient();
-
-			// Retrieve a reference to a queue.
-			CloudQueue queue = queueClient.GetQueueReference("testqueuepleaseignore");
-
-			queue.FetchAttributes();
-			var count = queue.ApproximateMessageCount;
-
-			while (count > 0) //loop, if queue has message, wait 1 second, ask again
+			while ((DateTime.Now.Subtract(invocationTime)).Seconds < timeout)
 			{
-				log.Verbose("Waiting...");
-				System.Threading.Thread.Sleep(500);
-				queue.FetchAttributes();
-				count = queue.ApproximateMessageCount;
+				var batch = await receiver.ReceiveBatchAsync(10);
+
+				List<Task> taskList = new List<Task>();
+				
+				foreach(var mess in batch)
+				{
+					log.Verbose("    ----  Function BATCHING ::" + mess.ToString());
+					object url;
+
+					if (mess.Properties.ContainsKey("URI"))
+					{
+						url = mess.Properties["URI"];
+
+						System.Uri uri = new Uri(url.ToString());
+
+						CloudBlockBlob blob = new CloudBlockBlob(uri);
+						string name = blob.Name;
+
+						string ext = Path.GetExtension(uri.ToString());
+						if (!SupportedImageTypes.Contains(ext))
+						{
+							log.Verbose("    IGNORE Object is not a supported image type");
+							continue;
+						}
+
+						taskList.Add(MakeRequest(uri.ToString(), name, ext, log, mess));
+					}
+					else
+					{
+						await mess.DeadLetterAsync();
+					}
+
+					//remove the running message after completion
+				}
+
+				taskList.Add(Task.Delay(1000));
+
+				await Task.WhenAll(taskList);
 			}
-			CloudQueueMessage message = new CloudQueueMessage("running...");
-			queue.AddMessage(message);
-
-			byte[] file = new byte[input.Length];
-			file = ReadFully(input);
-			
-			//remove the running message after completion
-			await MakeRequest(file, name, ext, log);
-
-			CloudQueueMessage mess = queue.GetMessages(1).GetEnumerator().Current;
-			queue.DeleteMessage(mess);
 		}
 
-		public static byte[] ReadFully(Stream input)
+		/*public static byte[] ReadFully(Stream input)
 		{
 			byte[] buffer = new byte[input.Length];
 			using (MemoryStream ms = new MemoryStream())
@@ -66,9 +82,15 @@ namespace FunctionApp1
 				}
 				return ms.ToArray();
 			}
+		}*/
+		
+		public class URLObject
+		{
+			public string DataRepresentation = "URL";
+			public string value = "";
 		}
 
-		public static async Task MakeRequest(byte[] input, string name, string ext, TraceWriter log)
+		public static async Task MakeRequest(string input, string name, string ext, TraceWriter log, BrokeredMessage mess)
 		{
 			try
 			{
@@ -84,40 +106,20 @@ namespace FunctionApp1
 				//var uri = System.Environment.GetEnvironmentVariable("subscriptionEndpoint");
 				var uri = System.Environment.GetEnvironmentVariable("subscriptionEndpoint", EnvironmentVariableTarget.Process);
 
-				MediaTypeHeaderValue contentType;
-
-				switch (ext)
-				{
-					case "png":
-						contentType = new MediaTypeHeaderValue("image/png");
-						break;
-					case "gif":
-						contentType = new MediaTypeHeaderValue("image/gif");
-						break;
-					case "jpeg":
-						contentType = new MediaTypeHeaderValue("image/jpeg");
-						break;
-					case "jpg":
-						contentType = new MediaTypeHeaderValue("image/jpeg");
-						break;
-					case "tiff":
-						contentType = new MediaTypeHeaderValue("image/tiff");
-						break;
-					case "bmp":
-						contentType = new MediaTypeHeaderValue("image/bmp");
-						break;
-					default:
-						log.Verbose("File wrong format: not an image");
-						return;
-				}
-
+				MediaTypeHeaderValue contentType = new MediaTypeHeaderValue("application/json");;
+				
+				var body = new URLObject();
+				body.value = input;
+				
 				HttpResponseMessage response;
 				string contents = "";
-				byte[] byteData = Encoding.UTF8.GetBytes(input.ToString());
+				string json = JsonConvert.SerializeObject(body);
+
+				byte[] byteData = Encoding.UTF8.GetBytes(json);
 
 				try
 				{
-					using (var content = new ByteArrayContent(input))
+					using (var content = new ByteArrayContent(byteData))
 					{
 						// post json
 						content.Headers.ContentType = contentType;
@@ -134,16 +136,19 @@ namespace FunctionApp1
 					{
 						log.Verbose("!!  ----  ----  FOUND MATCH for img: " + name + "." + ext);
 						await MailNotification(response, name, log);
+						await mess.CompleteAsync();
 					}
 					else if (obj.IsMatch == "False")
 					{
 						log.Verbose("..  ----  ----  NO MATCH FOUND for img: " + name + "." + ext);
+						await mess.CompleteAsync();
 					}
 					else
 					{
 						log.Verbose(".!!  ----  ----  ERROR for img: " + name + "." + ext);
 						string err = (" .. the proper response was not found" + obj);
 						await MailNotificationError(await response.Content.ReadAsStringAsync(), log);
+						await mess.AbandonAsync();
 						throw new Exception(" .. the proper response was not found" + obj);
 					}
 				}
