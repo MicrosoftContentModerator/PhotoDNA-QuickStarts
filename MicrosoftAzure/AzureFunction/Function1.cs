@@ -18,22 +18,20 @@ namespace FunctionApp1
 {
 	public static class Function1
 	{
-
 		static HashSet<string> SupportedImageTypes { get; } = new HashSet<string> { ".png", ".gif", ".jpeg", ".jpg", ".tiff", ".bmp" };
 		static int timeout = 280;
 
-		[FunctionName("PDNAMonitoring")]
-		public static async void Run([TimerTrigger("0 */5 * * * *")]TimerInfo myTimer, TraceWriter log)
+		public static async void Run(TimerInfo myTimer, TraceWriter log)
 		{
 			try
 			{
 				DateTime invocationTime = DateTime.Now;
 				var receiverFactory = MessagingFactory.CreateFromConnectionString(System.Environment.GetEnvironmentVariable("NamespaceConnectionString", EnvironmentVariableTarget.Process));
-				var receiver = await receiverFactory.CreateMessageReceiverAsync(System.Environment.GetEnvironmentVariable("ServiceBusUniqueName", EnvironmentVariableTarget.Process), ReceiveMode.PeekLock);
+				var receiver = await receiverFactory.CreateMessageReceiverAsync("PDNAMonitoringImageQueue", ReceiveMode.PeekLock);
 
 				while ((DateTime.Now.Subtract(invocationTime)).Seconds < timeout)
 				{
-					var batch = await receiver.ReceiveBatchAsync(25);
+					var batch = receiver.ReceiveBatch(10);
 					if (batch == null)
 					{
 						log.Verbose("Queue returned NULL and BREAK function");
@@ -76,7 +74,6 @@ namespace FunctionApp1
 						{
 							if (mess.Properties.ContainsKey("URI"))
 							{
-
 								object url;
 								url = mess.Properties["URI"];
 								System.Uri uri = new Uri(url.ToString());
@@ -90,17 +87,13 @@ namespace FunctionApp1
 
 								CloudBlockBlob blob = new CloudBlockBlob(uri);
 								HashedImage image = new HashedImage(blob.Name);
+								image.mess = mess;
 
-
-								HttpWebRequest request = (HttpWebRequest)WebRequest.Create(uri);
-								HttpWebResponse response = (HttpWebResponse)request.GetResponse();
-								Stream receiveStream = response.GetResponseStream();
+								Stream receiveStream = await blob.OpenReadAsync();
 
 								image.value = PdnaClientHash.GenerateHash(receiveStream);
 
 								receiveStream.Close();
-								response.Close();
-
 								hashes.Add(image);
 							}
 							else
@@ -152,7 +145,7 @@ namespace FunctionApp1
 
 			public HashedImage(string fileName)
 			{
-				this.key = fileName + "___" + Guid.NewGuid().ToString();
+				this.key = fileName + "_" + Guid.NewGuid().ToString();
 			}
 		}
 
@@ -178,20 +171,17 @@ namespace FunctionApp1
 				//var uri = System.Environment.GetEnvironmentVariable("subscriptionEndpoint");
 				var uri = System.Environment.GetEnvironmentVariable("subscriptionEndpoint", EnvironmentVariableTarget.Process);
 
-				MediaTypeHeaderValue contentType = new MediaTypeHeaderValue("multipart/form-data");
+				//MediaTypeHeaderValue contentType = new MediaTypeHeaderValue("multipart/form-data");
 
-				
-				var body = new Form();
-				var data = new  MultipartFormDataContent();
+				var data = new MultipartFormDataContent();
+
 				foreach (var image in imageList)
 				{
-					data.Add(new ByteArrayContent(image.value), image.key);
+					data.Add(new ByteArrayContent(image.value), image.key, image.key);
 				}
 
-				body.formdata = data;
 				HttpResponseMessage response;
 				string contents = "";
-				
 
 				//byte[] byteData = Encoding.UTF8.GetBytes(body);
 
@@ -200,7 +190,7 @@ namespace FunctionApp1
 					using (var content = data)
 					{
 						// post json
-						content.Headers.ContentType = contentType;
+						//content.Headers.ContentType = contentType;
 						response = await client.PostAsync(uri, content);
 
 						// get response as string
@@ -209,8 +199,8 @@ namespace FunctionApp1
 
 					// process response
 					dynamic obj = JsonConvert.DeserializeObject(contents);
-
-					foreach (var result in obj.MatchResult)
+					//log.Verbose("() () () Contents: " + contents);
+					foreach (var result in obj.MatchResults)
 					{
 						try
 						{
@@ -218,7 +208,7 @@ namespace FunctionApp1
 							{
 								if (result.IsMatch == "True")
 								{
-									var name = result.ContentId;
+									var name = result.ContentId.ToString();
 									log.Verbose("!!  ----  ----  FOUND MATCH for img: " + name);
 									var mess = GetBrokeredMessage(imageList, name);
 									await MailNotification(response, name, log);
@@ -226,7 +216,7 @@ namespace FunctionApp1
 								}
 								else if (result.IsMatch == "False")
 								{
-									var name = result.ContentId;
+									var name = result.ContentId.ToString();
 									log.Verbose("..  ----  ----  NO MATCH FOUND for img: " + name);
 									var mess = GetBrokeredMessage(imageList, name);
 									await mess.CompleteAsync();
@@ -238,7 +228,7 @@ namespace FunctionApp1
 								string err = (" .. the proper response was not found" + obj);
 
 								await MailNotificationError(await response.Content.ReadAsStringAsync(), log);
-								var name = result.ContentId;
+								var name = result.ContentId.ToString();
 								var mess = GetBrokeredMessage(imageList, name);
 								await mess.AbandonAsync();
 								throw new Exception(" .. the proper response was not found" + obj);
@@ -246,7 +236,7 @@ namespace FunctionApp1
 						}
 						catch (Microsoft.CSharp.RuntimeBinder.RuntimeBinderException e)
 						{
-							log.Verbose("!!  ERROR ----  did nto receive expected response from PDNA (RuntimeBinder): " + GetAllMessage(e) + " OBJECT: " + contents);
+							log.Verbose("!!  ERROR ----  did nto receive expected response from PDNA (RuntimeBinder): " + GetAllMessage(e));
 						}
 					}
 
@@ -261,21 +251,18 @@ namespace FunctionApp1
 			}
 			catch (Exception ex)
 			{
-				string err = (" An error has occured while attempting to send the image request to PDNA, Exception:  " + GetAllMessage(ex));
-				await MailNotificationError(err, log);
-				log.Verbose(" An error has occured while attempting to send the image request to PDNA, Exception:  " + GetAllMessage(ex));
+				if (!ex.Message.Contains("The lock supplied is invalid"))
+				{
+					string err = ("And Error was thrown trying to send Json to the PDNA subscription endpoint: " + GetAllMessage(ex));
+					await MailNotificationError(err, log);
+					log.Verbose("And Error was thrown trying to send Json to the PDNA subscription endpoint: " + GetAllMessage(ex));
+				}
 			}
-		}
-
-		public class Form
-		{
-			public string mode = "formdata";
-			public MultipartFormDataContent formdata;
 		}
 
 		private static BrokeredMessage GetBrokeredMessage(List<HashedImage> imageList, string name)
 		{
-			foreach(var image in imageList)
+			foreach (var image in imageList)
 			{
 				if (image.key.Equals(name))
 				{
@@ -290,13 +277,13 @@ namespace FunctionApp1
 			string s = ex.Message;
 			s += "  TYPE: " + ex.GetType().ToString();
 			string trace = "  STACK: " + ex.StackTrace;
-			while(ex.InnerException != null)
+			while (ex.InnerException != null)
 			{
 				s += " INNER: " + ex.InnerException.Message;
 				ex = ex.InnerException;
 			}
 			s += trace;
-			
+
 			return s;
 		}
 
@@ -366,7 +353,7 @@ namespace FunctionApp1
 				{
 					log.Verbose("!!  ERROR ----  ---- The email was not sent.");
 					log.Verbose("!!  ERROR ----  ---- Error message: " + ex.Message + "| | |" + ex.StackTrace);
-					while(ex.InnerException != null)
+					while (ex.InnerException != null)
 					{
 						log.Verbose("!!  ERROR ----  ---- Error message: " + ex.Message + "| | |" + ex.StackTrace);
 						ex = ex.InnerException;
@@ -409,7 +396,7 @@ namespace FunctionApp1
 
 			try
 			{
-				log.Verbose("!!  ----  ----  ---- FOUND MATCH: Attempting to send email for: ");
+				log.Verbose("!!  ---- ERROR  ---- FOUND");
 
 				//string fromEmail = System.Environment.GetEnvironmentVariable("senderEmail");
 				//string toEmail = System.Environment.GetEnvironmentVariable("receiverEmail");
