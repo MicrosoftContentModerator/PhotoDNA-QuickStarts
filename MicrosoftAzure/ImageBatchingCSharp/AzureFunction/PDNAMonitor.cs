@@ -67,10 +67,10 @@ namespace Microsoft.Ops.BlobMonitor
 
 					List<Task> taskList = new List<Task>();
 
+					int batchCount = 0;
 					foreach (var batchedSet in BatchedSets)
 					{
 						List<HashedImage> hashes = new List<HashedImage>();
-
 						foreach (var mess in batchedSet)
 						{
 							if (mess.Properties.ContainsKey("URI"))
@@ -81,7 +81,8 @@ namespace Microsoft.Ops.BlobMonitor
 								string ext = Path.GetExtension(uri.ToString());
 								if (!SupportedImageTypes.Contains(ext))
 								{
-									log.Verbose("PDNAMonitor: IGNORE Object is not a supported image type");
+									var msg = string.Format("PDNAMonitor: Not a supported image type, ignored: {0}", url.ToString());
+									log.Verbose(msg);
 									await mess.DeadLetterAsync();
 									continue;
 								}
@@ -101,16 +102,14 @@ namespace Microsoft.Ops.BlobMonitor
 							{
 								await mess.DeadLetterAsync();
 							}
-
 						}
 
-
-						log.Verbose("    ----  Function BATCHING ::");
-
+						// make the batch call to pdna
 						taskList.Add(MakeRequest(hashes, log));
 
-						await Task.Delay(150);
+						await Task.Delay(100);
 					}
+
 					await Task.WhenAll(taskList);
 				}
 
@@ -121,20 +120,6 @@ namespace Microsoft.Ops.BlobMonitor
 			}
 
 		}
-
-		/*public static byte[] ReadFully(Stream input)
-		{
-			byte[] buffer = new byte[input.Length];
-			using (MemoryStream ms = new MemoryStream())
-			{
-				int read;
-				while ((read = input.Read(buffer, 0, buffer.Length)) > 0)
-				{
-					ms.Write(buffer, 0, read);
-				}
-				return ms.ToArray();
-			}
-		}*/
 
 		public class HashedImage
 		{
@@ -162,7 +147,7 @@ namespace Microsoft.Ops.BlobMonitor
 			{
 				var client = new HttpClient();
 
-				log.Verbose("    ----  Making PDNA Request for image: ");
+				log.Verbose("PDNAMonitor: Making PDNA Request for images");
 				// Request headers
 
 				//client.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", System.Environment.GetEnvironmentVariable("subscriptionKey"));
@@ -172,26 +157,19 @@ namespace Microsoft.Ops.BlobMonitor
 				//var uri = System.Environment.GetEnvironmentVariable("subscriptionEndpoint");
 				var uri = System.Environment.GetEnvironmentVariable("subscriptionEndpoint", EnvironmentVariableTarget.Process);
 
-				//MediaTypeHeaderValue contentType = new MediaTypeHeaderValue("multipart/form-data");
-
-				var data = new MultipartFormDataContent();
-
-				foreach (var image in imageList)
-				{
-					data.Add(new ByteArrayContent(image.value), image.key, image.key);
-				}
-
 				HttpResponseMessage response;
 				string contents = "";
 
-				//byte[] byteData = Encoding.UTF8.GetBytes(body);
-
 				try
 				{
-					using (var content = data)
+					using (var content = new MultipartFormDataContent())
 					{
+						foreach (var image in imageList)
+						{
+							content.Add(new ByteArrayContent(image.value), image.key, image.key);
+						}
+
 						// post json
-						//content.Headers.ContentType = contentType;
 						response = await client.PostAsync(uri, content);
 
 						// get response as string
@@ -210,7 +188,7 @@ namespace Microsoft.Ops.BlobMonitor
 								if (result.IsMatch == "True")
 								{
 									var name = result.ContentId.ToString();
-									log.Verbose("!!  ----  ----  FOUND MATCH for img: " + name);
+									log.Verbose("PDNAMonitor: FOUND MATCH for img: " + name);
 									var mess = GetBrokeredMessage(imageList, name);
 									await MailNotification(response, name, log);
 									await mess.CompleteAsync();
@@ -218,15 +196,14 @@ namespace Microsoft.Ops.BlobMonitor
 								else if (result.IsMatch == "False")
 								{
 									var name = result.ContentId.ToString();
-									log.Verbose("..  ----  ----  NO MATCH FOUND for img: " + name);
+									log.Verbose("PDNAMonitor: No match found for img: " + name);
 									var mess = GetBrokeredMessage(imageList, name);
 									await mess.CompleteAsync();
 								}
 							}
 							else
 							{
-								log.Verbose(".!!  ----  ----  ERROR for img: ");
-								string err = (" .. the proper response was not found" + obj);
+								log.Verbose("PDNAMonitor: Proper response was not found: " + obj);
 
 								await MailNotificationError(await response.Content.ReadAsStringAsync(), log);
 								var name = result.ContentId.ToString();
@@ -237,16 +214,19 @@ namespace Microsoft.Ops.BlobMonitor
 						}
 						catch (Microsoft.CSharp.RuntimeBinder.RuntimeBinderException e)
 						{
-							log.Verbose("!!  ERROR ----  did nto receive expected response from PDNA (RuntimeBinder): " + GetAllMessage(e));
+							log.Verbose("PDNAMonitor: Did nto receive expected response from PDNA (RuntimeBinder): " + GetAllMessage(e));
 						}
 					}
 
 				}
 				catch (Exception ex)
 				{
-					string err = ("And Error was thrown trying to send Json to the PDNA subscription endpoint: " + GetAllMessage(ex));
-					await MailNotificationError(err, log);
-					log.Verbose("And Error was thrown trying to send Json to the PDNA subscription endpoint: " + GetAllMessage(ex));
+					if (!ex.Message.Contains("The lock supplied is invalid"))
+					{
+						string err = ("And Error was thrown trying to send Json to the PDNA subscription endpoint: " + GetAllMessage(ex));
+						await MailNotificationError(err, log);
+						log.Verbose(err);
+					}
 				}
 
 			}
@@ -256,7 +236,7 @@ namespace Microsoft.Ops.BlobMonitor
 				{
 					string err = ("And Error was thrown trying to send Json to the PDNA subscription endpoint: " + GetAllMessage(ex));
 					await MailNotificationError(err, log);
-					log.Verbose("And Error was thrown trying to send Json to the PDNA subscription endpoint: " + GetAllMessage(ex));
+					log.Verbose(err);
 				}
 			}
 		}
@@ -270,6 +250,7 @@ namespace Microsoft.Ops.BlobMonitor
 					return image.mess;
 				}
 			}
+
 			throw new Exception("Failed to FIND IMAGE FOR name");
 		}
 
@@ -317,8 +298,6 @@ namespace Microsoft.Ops.BlobMonitor
 
 			try
 			{
-				Console.Write("!!  ----  ----  ---- FOUND MATCH: Attempting to send email for: ");
-
 				//string fromEmail = System.Environment.GetEnvironmentVariable("senderEmail");
 				//string toEmail = System.Environment.GetEnvironmentVariable("receiverEmail");
 				string fromEmail = System.Environment.GetEnvironmentVariable("senderEmail", EnvironmentVariableTarget.Process);
@@ -409,7 +388,7 @@ namespace Microsoft.Ops.BlobMonitor
 				string smtpUser = System.Environment.GetEnvironmentVariable("smtpUserName", EnvironmentVariableTarget.Process); // your smtp user
 				string smtpPass = System.Environment.GetEnvironmentVariable("smtpPassword", EnvironmentVariableTarget.Process); // your smtp password
 				string subject = "Error was thrown by PhotoDNA Monitoring";
-				string messageBody = "An error was thrown attempting to scan an object uploaded to your blob storage account. This is an example email";
+				string messageBody = "An error was thrown attempting to scan an object uploaded to your blob storage account. " + err;
 
 				MailMessage mail = new MailMessage(fromEmail, toEmail);
 				SmtpClient client = new SmtpClient();

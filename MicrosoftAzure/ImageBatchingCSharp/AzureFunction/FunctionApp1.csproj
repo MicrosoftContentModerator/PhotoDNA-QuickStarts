@@ -11,7 +11,7 @@
   <ItemGroup>
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="Microsoft.Ops.Common.PreHashClient.CSharp">
-      <HintPath>..\..\..\..\Documents\prehash-client-debug\Debug\Microsoft.Ops.Common.PreHashClient.CSharp.dll</HintPath>
+      <HintPath>..\External\Microsoft.Ops.Common.PreHashClient.CSharp.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>
