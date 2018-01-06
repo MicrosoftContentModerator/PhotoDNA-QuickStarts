@@ -1,0 +1,12 @@
+{
+  "bindings": [
+    {
+      "name": "myBlob",
+      "type": "blobTrigger",
+      "direction": "in",
+      "path": "<YourBlobNameHere>/{name}.{ext}",
+      "connection": "AzureWebJobsDashboard"
+    }
+  ],
+  "disabled": false
+}

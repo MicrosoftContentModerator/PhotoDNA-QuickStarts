@@ -1,0 +1,12 @@
+{
+  "bindings": [
+    {
+      "type": "timerTrigger",
+      "schedule": "0 */5 * * * *",
+      "useMonitor": true,
+      "runOnStartup": false,
+      "name": "myTimer"
+    }
+  ],
+  "disabled": false
+}
