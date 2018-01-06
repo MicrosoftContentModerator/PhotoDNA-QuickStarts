@@ -14,9 +14,9 @@ using Microsoft.ServiceBus.Messaging;
 using System.Net;
 using Microsoft.Ops.Common.PreHashClient.CSharp;
 
-namespace FunctionApp1
+namespace Microsoft.Ops.BlobMonitor
 {
-	public static class Function1
+	public static class PDNAMonitor
 	{
 		static HashSet<string> SupportedImageTypes { get; } = new HashSet<string> { ".png", ".gif", ".jpeg", ".jpg", ".tiff", ".bmp" };
 		static int timeout = 280;
@@ -34,7 +34,7 @@ namespace FunctionApp1
 					var batch = receiver.ReceiveBatch(10);
 					if (batch == null)
 					{
-						log.Verbose("Queue returned NULL and BREAK function");
+						log.Verbose("PDNAMonitor: Queue returned NULL and BREAK function");
 						break;
 					}
 
@@ -49,7 +49,7 @@ namespace FunctionApp1
 							hashBatch.Add(mess);
 							i++;
 						}
-						if (i == 4)
+						else
 						{
 							hashBatch.Add(mess);
 							BatchedSets.Add(hashBatch);
@@ -58,9 +58,10 @@ namespace FunctionApp1
 							hashBatch = new List<BrokeredMessage>();
 						}
 					}
+
 					if (BatchedSets.Count == 0)
 					{
-						log.Verbose("Building Batch returned NO BATCHES:: break and stop");
+						log.Verbose("PDNAMonitor: Building Batch returned NO BATCHES:: break and stop");
 						break;
 					}
 
@@ -80,7 +81,7 @@ namespace FunctionApp1
 								string ext = Path.GetExtension(uri.ToString());
 								if (!SupportedImageTypes.Contains(ext))
 								{
-									log.Verbose("    IGNORE Object is not a supported image type");
+									log.Verbose("PDNAMonitor: IGNORE Object is not a supported image type");
 									await mess.DeadLetterAsync();
 									continue;
 								}
