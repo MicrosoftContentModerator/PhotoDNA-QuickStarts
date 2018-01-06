@@ -32,16 +32,16 @@
 				"description": "The user name used to create you Simple Mail account"
 			}
 		},
-		"notificationSenderEmail": {
-			"type": "string",
-			"metadata": {
-				"description": "The email account that will be used to send the notification emails."
-			}
-		},
 		"notificationReceiverEmail": {
 			"type": "string",
 			"metadata": {
 				"description": "The email that will receive notificaitons when PhotoDNA happens to find a match on images uploaded to your storage"
+			}
+		},
+		"notificationSenderEmail": {
+			"type": "string",
+			"metadata": {
+				"description": "The email account that will be used to send the notification emails."
 			}
 		},
 		"PhotoDNASubscriptionEndpoint": {
@@ -50,14 +50,21 @@
 				"description": "Your unique PhotoDNA endpoint addess this can be found here: "
 			}
 		},
-		"PhotoDNASubscriptionKey": {
+    "PhotoDNASubscriptionKey": {
+      "type": "string",
+      "metadata": {
+        "description": "Your unique PhotoDNA subscription key, this can be found here: "
+      }
+    },
+    "ServiceBusUniqueName": {
 			"type": "string",
 			"metadata": {
-				"description": "Your unique PhotoDNA subscription key, this can be found here: "
+				"description": "The Name of the Service Bus that holds the queue, this must be globaly unique"
 			}
 		},
 		"callbackEndpoint": {
 			"type": "string",
+      "defaultValue": "N/A",
 			"metadata": {
 				"description": "(optional) when PhotoDNA returns a match or errors occure, the results will be posted to this address"
 			}
@@ -75,9 +82,9 @@
     "smtpPassword": "[parameters('smtpPassword')]",
     "smtpUserName": "[parameters('smtpUserName')]",
     "imageQueueName": "PDNAMonitoringImageQueue",
-    "serviceBusNamespace": "PDNAMonitoringServiceBus",
+    "serviceBusNamespace": "[parameters('ServiceBusUniqueName')]",
     "defaultSASKeyName": "RootManageSharedAccessKey",
-    "authRuleResourceId": "[resourceId('Microsoft.ServiceBus/namespaces/authorizationRules', 'PDNAMonitoringServiceBus', 'RootManageSharedAccessKey')]",
+    "authRuleResourceId": "[resourceId('Microsoft.ServiceBus/namespaces/authorizationRules', parameters('ServiceBusUniqueName'), 'RootManageSharedAccessKey')]",
 	  "sbVersion": "2017-04-01"
 
 	},
@@ -88,24 +95,24 @@
         "name": "Basic",
         "tier": "Basic"
       },
-      "name": "PDNAMonitoringServiceBus",
+      "name": "[parameters('ServiceBusUniqueName')]",
       "apiVersion": "2017-04-01",
       "location": "Central US",
       "tags": { },
       "scale": null,
       "properties": {
         "provisioningState": "Created",
-        "metricId": "[concat('2a154f79-8247-4a91-b95b-bd68f15b46d0:pdnamonitoringservicebus', 'PDNAMonitoringServiceBus')]",
+        "metricId": "[concat('2a154f79-8247-4a91-b95b-bd68f15b46d0:', toLower(parameters('ServiceBusUniqueName')), parameters('ServiceBusUniqueName'))]",
         "createdAt": "2018-01-04T22:22:46.09Z",
         "updatedAt": "2018-01-04T22:22:46.09Z",
-        "serviceBusEndpoint": "[concat('https://', 'PDNAMonitoringServiceBus','.servicebus.windows.net:443/')]"
+        "serviceBusEndpoint": "[concat('https://', parameters('ServiceBusUniqueName'),'.servicebus.windows.net:443/')]"
       },
       "dependsOn": [ ]
     },
     {
           "comments": "Generalized from resource: '/subscriptions/2a154f79-8247-4a91-b95b-bd68f15b46d0/resourcegroups/NEW/providers/Microsoft.ServiceBus/namespaces/PDNAMonitoringServiceBus/queues/imagequeue'.",
           "type": "Microsoft.ServiceBus/namespaces/queues",
-          "name": "[concat('PDNAMonitoringServiceBus', '/', 'PDNAMonitoringImageQueue')]",
+          "name": "[concat(parameters('ServiceBusUniqueName'), '/', 'PDNAMonitoringImageQueue')]",
           "apiVersion": "2017-04-01",
           "location": "Central US",
           "scale": null,
@@ -127,7 +134,7 @@
               }
           },
           "dependsOn": [
-              "[resourceId('Microsoft.ServiceBus/namespaces', 'PDNAMonitoringServiceBus')]"
+              "[resourceId('Microsoft.ServiceBus/namespaces', parameters('ServiceBusUniqueName'))]"
           ]
       },			
         {

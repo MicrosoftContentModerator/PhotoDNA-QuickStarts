@@ -11,11 +11,13 @@ using Microsoft.Azure.WebJobs.Host;
 using System.Text;
 using Microsoft.WindowsAzure.Storage.Blob;
 using Microsoft.ServiceBus.Messaging;
+using System.Net;
+using Microsoft.Ops.Common.PreHashClient.CSharp;
 
 namespace FunctionApp1
 {
 	public static class Function1
-    {
+	{
 
 		static HashSet<string> SupportedImageTypes { get; } = new HashSet<string> { ".png", ".gif", ".jpeg", ".jpg", ".tiff", ".bmp" };
 		static int timeout = 280;
@@ -23,51 +25,106 @@ namespace FunctionApp1
 		[FunctionName("PDNAMonitoring")]
 		public static async void Run([TimerTrigger("0 */5 * * * *")]TimerInfo myTimer, TraceWriter log)
 		{
-			DateTime invocationTime = DateTime.Now;
-			var receiverFactory = MessagingFactory.CreateFromConnectionString(System.Environment.GetEnvironmentVariable("NamespaceConnectionString", EnvironmentVariableTarget.Process));
-			var receiver = await receiverFactory.CreateMessageReceiverAsync("PDNAMonitoringImageQueue", ReceiveMode.PeekLock);
-
-			while ((DateTime.Now.Subtract(invocationTime)).Seconds < timeout)
+			try
 			{
-				var batch = await receiver.ReceiveBatchAsync(10);
-				if (batch == null) break;
-				List<Task> taskList = new List<Task>();
-				
-				foreach(var mess in batch)
+				DateTime invocationTime = DateTime.Now;
+				var receiverFactory = MessagingFactory.CreateFromConnectionString(System.Environment.GetEnvironmentVariable("NamespaceConnectionString", EnvironmentVariableTarget.Process));
+				var receiver = await receiverFactory.CreateMessageReceiverAsync(System.Environment.GetEnvironmentVariable("ServiceBusUniqueName", EnvironmentVariableTarget.Process), ReceiveMode.PeekLock);
+
+				while ((DateTime.Now.Subtract(invocationTime)).Seconds < timeout)
 				{
-					log.Verbose("    ----  Function BATCHING ::" + mess.ToString());
-					object url;
-
-					if (mess.Properties.ContainsKey("URI"))
+					var batch = await receiver.ReceiveBatchAsync(25);
+					if (batch == null)
 					{
-						url = mess.Properties["URI"];
+						log.Verbose("Queue returned NULL and BREAK function");
+						break;
+					}
 
-						System.Uri uri = new Uri(url.ToString());
+					List<List<BrokeredMessage>> BatchedSets = new List<List<BrokeredMessage>>();
+					List<BrokeredMessage> hashBatch = new List<BrokeredMessage>();
 
-						CloudBlockBlob blob = new CloudBlockBlob(uri);
-						string name = blob.Name;
-
-						string ext = Path.GetExtension(uri.ToString());
-						if (!SupportedImageTypes.Contains(ext))
+					int i = 0;
+					foreach (var mess in batch)
+					{
+						if (i < 4)
 						{
-							log.Verbose("    IGNORE Object is not a supported image type");
-							continue;
+							hashBatch.Add(mess);
+							i++;
+						}
+						if (i == 4)
+						{
+							hashBatch.Add(mess);
+							BatchedSets.Add(hashBatch);
+
+							i = 0;
+							hashBatch = new List<BrokeredMessage>();
+						}
+					}
+					if (BatchedSets.Count == 0)
+					{
+						log.Verbose("Building Batch returned NO BATCHES:: break and stop");
+						break;
+					}
+
+					List<Task> taskList = new List<Task>();
+
+					foreach (var batchedSet in BatchedSets)
+					{
+						List<HashedImage> hashes = new List<HashedImage>();
+
+						foreach (var mess in batchedSet)
+						{
+							if (mess.Properties.ContainsKey("URI"))
+							{
+
+								object url;
+								url = mess.Properties["URI"];
+								System.Uri uri = new Uri(url.ToString());
+								string ext = Path.GetExtension(uri.ToString());
+								if (!SupportedImageTypes.Contains(ext))
+								{
+									log.Verbose("    IGNORE Object is not a supported image type");
+									await mess.DeadLetterAsync();
+									continue;
+								}
+
+								CloudBlockBlob blob = new CloudBlockBlob(uri);
+								HashedImage image = new HashedImage(blob.Name);
+
+
+								HttpWebRequest request = (HttpWebRequest)WebRequest.Create(uri);
+								HttpWebResponse response = (HttpWebResponse)request.GetResponse();
+								Stream receiveStream = response.GetResponseStream();
+
+								image.value = PdnaClientHash.GenerateHash(receiveStream);
+
+								receiveStream.Close();
+								response.Close();
+
+								hashes.Add(image);
+							}
+							else
+							{
+								await mess.DeadLetterAsync();
+							}
+
 						}
 
-						taskList.Add(MakeRequest(uri.ToString(), name, ext, log, mess));
-					}
-					else
-					{
-						await mess.DeadLetterAsync();
-					}
 
-					await Task.Delay(100);
-					//remove the running message after completion
+						log.Verbose("    ----  Function BATCHING ::");
+
+						taskList.Add(MakeRequest(hashes, log));
+
+						await Task.Delay(150);
+					}
+					await Task.WhenAll(taskList);
 				}
-				
-				await Task.WhenAll(taskList);
-			}
 
+			}
+			catch (Exception ex)
+			{
+				log.Verbose("Failed to run the app: " + GetAllMessage(ex));
+			}
 
 		}
 
@@ -84,14 +141,28 @@ namespace FunctionApp1
 				return ms.ToArray();
 			}
 		}*/
-		
+
+		public class HashedImage
+		{
+			public byte[] value;
+			public string description = "";
+			public string key;
+			public string type = "file";
+			public BrokeredMessage mess;
+
+			public HashedImage(string fileName)
+			{
+				this.key = fileName + "___" + Guid.NewGuid().ToString();
+			}
+		}
+
 		public class URLObject
 		{
 			public string DataRepresentation = "URL";
 			public string value = "";
 		}
 
-		public static async Task MakeRequest(string input, string name, string ext, TraceWriter log, BrokeredMessage mess)
+		public static async Task MakeRequest(List<HashedImage> imageList, TraceWriter log)
 		{
 			try
 			{
@@ -99,7 +170,7 @@ namespace FunctionApp1
 
 				log.Verbose("    ----  Making PDNA Request for image: ");
 				// Request headers
-				
+
 				//client.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", System.Environment.GetEnvironmentVariable("subscriptionKey"));
 				client.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", System.Environment.GetEnvironmentVariable("subscriptionKey", EnvironmentVariableTarget.Process));
 
@@ -107,20 +178,26 @@ namespace FunctionApp1
 				//var uri = System.Environment.GetEnvironmentVariable("subscriptionEndpoint");
 				var uri = System.Environment.GetEnvironmentVariable("subscriptionEndpoint", EnvironmentVariableTarget.Process);
 
-				MediaTypeHeaderValue contentType = new MediaTypeHeaderValue("application/json");;
+				MediaTypeHeaderValue contentType = new MediaTypeHeaderValue("multipart/form-data");
+
 				
-				var body = new URLObject();
-				body.value = input;
-				
+				var body = new Form();
+				var data = new  MultipartFormDataContent();
+				foreach (var image in imageList)
+				{
+					data.Add(new ByteArrayContent(image.value), image.key);
+				}
+
+				body.formdata = data;
 				HttpResponseMessage response;
 				string contents = "";
-				string json = JsonConvert.SerializeObject(body);
+				
 
-				byte[] byteData = Encoding.UTF8.GetBytes(json);
+				//byte[] byteData = Encoding.UTF8.GetBytes(body);
 
 				try
 				{
-					using (var content = new ByteArrayContent(byteData))
+					using (var content = data)
 					{
 						// post json
 						content.Headers.ContentType = contentType;
@@ -133,25 +210,46 @@ namespace FunctionApp1
 					// process response
 					dynamic obj = JsonConvert.DeserializeObject(contents);
 
-					if (obj.IsMatch == "True")
+					foreach (var result in obj.MatchResult)
 					{
-						log.Verbose("!!  ----  ----  FOUND MATCH for img: " + name + "." + ext);
-						await MailNotification(response, name, log);
-						await mess.CompleteAsync();
+						try
+						{
+							if (result != null && result.Status.Exception == null)
+							{
+								if (result.IsMatch == "True")
+								{
+									var name = result.ContentId;
+									log.Verbose("!!  ----  ----  FOUND MATCH for img: " + name);
+									var mess = GetBrokeredMessage(imageList, name);
+									await MailNotification(response, name, log);
+									await mess.CompleteAsync();
+								}
+								else if (result.IsMatch == "False")
+								{
+									var name = result.ContentId;
+									log.Verbose("..  ----  ----  NO MATCH FOUND for img: " + name);
+									var mess = GetBrokeredMessage(imageList, name);
+									await mess.CompleteAsync();
+								}
+							}
+							else
+							{
+								log.Verbose(".!!  ----  ----  ERROR for img: ");
+								string err = (" .. the proper response was not found" + obj);
+
+								await MailNotificationError(await response.Content.ReadAsStringAsync(), log);
+								var name = result.ContentId;
+								var mess = GetBrokeredMessage(imageList, name);
+								await mess.AbandonAsync();
+								throw new Exception(" .. the proper response was not found" + obj);
+							}
+						}
+						catch (Microsoft.CSharp.RuntimeBinder.RuntimeBinderException e)
+						{
+							log.Verbose("!!  ERROR ----  did nto receive expected response from PDNA (RuntimeBinder): " + GetAllMessage(e) + " OBJECT: " + contents);
+						}
 					}
-					else if (obj.IsMatch == "False")
-					{
-						log.Verbose("..  ----  ----  NO MATCH FOUND for img: " + name + "." + ext);
-						await mess.CompleteAsync();
-					}
-					else
-					{
-						log.Verbose(".!!  ----  ----  ERROR for img: " + name + "." + ext);
-						string err = (" .. the proper response was not found" + obj);
-						await MailNotificationError(await response.Content.ReadAsStringAsync(), log);
-						await mess.AbandonAsync();
-						throw new Exception(" .. the proper response was not found" + obj);
-					}
+
 				}
 				catch (Exception ex)
 				{
@@ -169,15 +267,35 @@ namespace FunctionApp1
 			}
 		}
 
+		public class Form
+		{
+			public string mode = "formdata";
+			public MultipartFormDataContent formdata;
+		}
+
+		private static BrokeredMessage GetBrokeredMessage(List<HashedImage> imageList, string name)
+		{
+			foreach(var image in imageList)
+			{
+				if (image.key.Equals(name))
+				{
+					return image.mess;
+				}
+			}
+			throw new Exception("Failed to FIND IMAGE FOR name");
+		}
+
 		static string GetAllMessage(Exception ex)
 		{
 			string s = ex.Message;
 			s += "  TYPE: " + ex.GetType().ToString();
+			string trace = "  STACK: " + ex.StackTrace;
 			while(ex.InnerException != null)
 			{
 				s += " INNER: " + ex.InnerException.Message;
 				ex = ex.InnerException;
 			}
+			s += trace;
 			
 			return s;
 		}
@@ -186,23 +304,27 @@ namespace FunctionApp1
 		{
 			try
 			{
-				var postClient = new HttpClient();
-				var result = await message.Content.ReadAsStringAsync();
-				dynamic jsonResponse = JsonConvert.SerializeObject(result);
-				HttpResponseMessage response;
-				byte[] byteData = Encoding.UTF8.GetBytes(jsonResponse);
-				using (var content = new ByteArrayContent(byteData))
+				string callbackEndPoint = System.Environment.GetEnvironmentVariable("callbackEndpoint", EnvironmentVariableTarget.Process);
+				if (callbackEndPoint != "N/A")
 				{
-					// post json
-					content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
-					//var postResponse = await postClient.PostAsync(System.Environment.GetEnvironmentVariable("callbackEndpoint"), jsonResponse);
-					response = await postClient.PostAsync(System.Environment.GetEnvironmentVariable("callbackEndpoint", EnvironmentVariableTarget.Process), content);
+					var postClient = new HttpClient();
+					var result = await message.Content.ReadAsStringAsync();
+					dynamic jsonResponse = JsonConvert.SerializeObject(result);
+					HttpResponseMessage response;
+					byte[] byteData = Encoding.UTF8.GetBytes(jsonResponse);
+					using (var content = new ByteArrayContent(byteData))
+					{
+						// post json
+						content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
+						//var postResponse = await postClient.PostAsync(System.Environment.GetEnvironmentVariable("callbackEndpoint"), jsonResponse);
+						response = await postClient.PostAsync(callbackEndPoint, content);
+					}
 				}
 
 			}
 			catch (Exception ex)
 			{
-				Console.WriteLine(ex);
+				log.Verbose(GetAllMessage(ex));
 			}
 
 			try
@@ -263,17 +385,21 @@ namespace FunctionApp1
 		{
 			try
 			{
-				var postClient = new HttpClient();
-				var result = err;
-				dynamic jsonResponse = JsonConvert.SerializeObject(result);
-				HttpResponseMessage response;
-				byte[] byteData = Encoding.UTF8.GetBytes(jsonResponse);
-				using (var content = new ByteArrayContent(byteData))
+				string callbackEndPoint = System.Environment.GetEnvironmentVariable("callbackEndpoint", EnvironmentVariableTarget.Process);
+				if (callbackEndPoint != "N/A")
 				{
-					// post json
-					content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
-					//var postResponse = await postClient.PostAsync(System.Environment.GetEnvironmentVariable("callbackEndpoint"), jsonResponse);
-					response = await postClient.PostAsync(System.Environment.GetEnvironmentVariable("callbackEndpoint", EnvironmentVariableTarget.Process), content);
+					var postClient = new HttpClient();
+					var result = err;
+					dynamic jsonResponse = JsonConvert.SerializeObject(result);
+					HttpResponseMessage response;
+					byte[] byteData = Encoding.UTF8.GetBytes(jsonResponse);
+					using (var content = new ByteArrayContent(byteData))
+					{
+						// post json
+						content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
+						//var postResponse = await postClient.PostAsync(System.Environment.GetEnvironmentVariable("callbackEndpoint"), jsonResponse);
+						response = await postClient.PostAsync(callbackEndPoint, content);
+					}
 				}
 			}
 			catch (Exception ex)
