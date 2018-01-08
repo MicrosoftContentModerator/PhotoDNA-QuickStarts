@@ -10,7 +10,7 @@ namespace Microsoft.Ops.BlobMonitor
 	{
 		public static async void Run(CloudBlockBlob myBlob, string name, string ext, TraceWriter log)
 		{
-			log.Verbose("StartLogging: " + name);
+			log.Verbose("BlobToQueue: StartLogging: " + name);
 			int MaxtryAttempts = 1000;
 			int tryAttempts = 1;
 			bool done = false;
@@ -19,7 +19,7 @@ namespace Microsoft.Ops.BlobMonitor
 				try
 				{
 					var senderFactory = MessagingFactory.CreateFromConnectionString(System.Environment.GetEnvironmentVariable("NamespaceConnectionString"));
-					var sender = await senderFactory.CreateMessageSenderAsync("PDNAMonitoringImageQueue");
+					var sender = await senderFactory.CreateMessageSenderAsync("pdnamonitoringimagequeue");
 					switch (ext)
 					{
 						case "png":

@@ -59,7 +59,7 @@ using System.Net;
 							hashBatch = new List<BrokeredMessage>();
 						}
 					}
-
+					if (hashBatch.Count > 0) BatchedSets.Add(hashBatch);
 					if (BatchedSets.Count == 0)
 					{
 						log.Verbose("PDNAMonitor: Building Batch returned NO BATCHES:: break and stop");
@@ -102,7 +102,7 @@ using System.Net;
                                                                         hashes.Add(image);
                                                                 }
                                                                 catch(Exception e){
-                                                                        log.Verbose("Failed To read uri : " + uri + “Due to :”  + e.Message);
+                                                                        log.Verbose("PDNAMonitor: Failed To read uri : " + uri + "Due to :"  + e.Message);
                                                                 }
 
 							}

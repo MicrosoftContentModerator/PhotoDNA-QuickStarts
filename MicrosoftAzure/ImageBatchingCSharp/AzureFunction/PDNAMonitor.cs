@@ -58,7 +58,7 @@ namespace Microsoft.Ops.BlobMonitor
 							hashBatch = new List<BrokeredMessage>();
 						}
 					}
-
+                    if (hashBatch.Count > 0) BatchedSets.Add(hashBatch);
 					if (BatchedSets.Count == 0)
 					{
 						log.Verbose("PDNAMonitor: Building Batch returned NO BATCHES:: break and stop");
