@@ -17,7 +17,7 @@ public static async void Run(CloudBlockBlob myBlob, string name, string ext, Tra
                                                                 try
                                                                 {
                                                                                 var senderFactory = MessagingFactory.CreateFromConnectionString(System.Environment.GetEnvironmentVariable("NamespaceConnectionString"));
-                                                                                var sender = await senderFactory.CreateMessageSenderAsync("PDNAMonitoringImageQueue");
+                                                                                var sender = await senderFactory.CreateMessageSenderAsync("pdnamonitoringimagequeue");
                                                                                 BrokeredMessage message = new BrokeredMessage();
                                                                                 switch (ext)
                                                                                 {

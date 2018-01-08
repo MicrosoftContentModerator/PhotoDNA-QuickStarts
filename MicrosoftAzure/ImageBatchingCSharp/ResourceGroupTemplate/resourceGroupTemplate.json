@@ -32,16 +32,16 @@
 				"description": "The user name used to create you Simple Mail account"
 			}
 		},
-		"notificationReceiverEmail": {
-			"type": "string",
-			"metadata": {
-				"description": "The email that will receive notificaitons when PhotoDNA happens to find a match on images uploaded to your storage"
-			}
-		},
 		"notificationSenderEmail": {
 			"type": "string",
 			"metadata": {
 				"description": "The email account that will be used to send the notification emails."
+			}
+		},
+		"notificationReceiverEmail": {
+			"type": "string",
+			"metadata": {
+				"description": "The email that will receive notificaitons when PhotoDNA happens to find a match on images uploaded to your storage"
 			}
 		},
 		"PhotoDNASubscriptionEndpoint": {
@@ -81,7 +81,7 @@
     "smtpHostAddress": "[parameters('smtpHostAddress')]",
     "smtpPassword": "[parameters('smtpPassword')]",
     "smtpUserName": "[parameters('smtpUserName')]",
-    "imageQueueName": "PDNAMonitoringImageQueue",
+    "imageQueueName": "pdnamonitoringimagequeue",
     "serviceBusNamespace": "[parameters('ServiceBusUniqueName')]",
     "defaultSASKeyName": "RootManageSharedAccessKey",
     "authRuleResourceId": "[resourceId('Microsoft.ServiceBus/namespaces/authorizationRules', parameters('ServiceBusUniqueName'), 'RootManageSharedAccessKey')]",
@@ -112,7 +112,7 @@
     {
           "comments": "Generalized from resource: '/subscriptions/2a154f79-8247-4a91-b95b-bd68f15b46d0/resourcegroups/NEW/providers/Microsoft.ServiceBus/namespaces/PDNAMonitoringServiceBus/queues/imagequeue'.",
           "type": "Microsoft.ServiceBus/namespaces/queues",
-          "name": "[concat(parameters('ServiceBusUniqueName'), '/', 'PDNAMonitoringImageQueue')]",
+          "name": "[concat(parameters('ServiceBusUniqueName'), '/', 'pdnamonitoringimagequeue')]",
           "apiVersion": "2017-04-01",
           "location": "Central US",
           "scale": null,
@@ -229,7 +229,7 @@
                   "smtpPassword": "[parameters('smtpPassword')]",
                   "smtpUserName": "[parameters('smtpUserName')]",
                   "NamespaceConnectionString": "[listkeys(variables('authRuleResourceId'), variables('sbVersion')).primaryConnectionString]",
-                  "imageQueueName": "PDNAMonitoringImageQueue"
+                  "imageQueueName": "pdnamonitoringimagequeue"
 								}
 							}
 						],

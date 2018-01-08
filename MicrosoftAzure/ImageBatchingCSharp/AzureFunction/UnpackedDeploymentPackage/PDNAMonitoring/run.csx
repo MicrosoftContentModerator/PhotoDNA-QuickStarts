@@ -28,7 +28,7 @@ using System.Net;
 			{
 				DateTime invocationTime = DateTime.Now;
 				var receiverFactory = MessagingFactory.CreateFromConnectionString(System.Environment.GetEnvironmentVariable("NamespaceConnectionString", EnvironmentVariableTarget.Process));
-				var receiver = await receiverFactory.CreateMessageReceiverAsync("PDNAMonitoringImageQueue", ReceiveMode.PeekLock);
+				var receiver = await receiverFactory.CreateMessageReceiverAsync("pdnamonitoringimagequeue", ReceiveMode.PeekLock);
 
 				while ((DateTime.Now.Subtract(invocationTime)).Seconds < timeout)
 				{

@@ -10,15 +10,18 @@ To being the process simply click
 
 ![](https://github.com/MicrosoftContentModerator/PhotoDNA-QuickStarts/blob/dev/MicrosoftAzure/ImageBatchingCSharp/Documentation/TemplateLandingPage.PNG?raw=true)
 
-- **Callback Endpoint:** A URL of *your* web service, which is capable of receiving JSON documents. If there is any error during monitoring, the stack will post the error to this endpoint. This field is optional.
+
+- **Target Storage Account Name:** The Name of the storage account resource group that this app will be added to, the same as the one selected from the drop down above labeled "Resource Group"
 - **Function App Name:** The name of the Function App resource that will be created.
-- **PDNA Storage Account Type:** The subscription type for the storage account.
+- **SMTP Host Address** The host address used by your SMTP mailer account. For example SendGrid's host address will be similar to:  "smtp.sendgrid.net"
+- **SMTP Password** The password used to login to your SMPT account with the user name bellow.
+- **SMTP User Name** The user name for your SMTP account.
 - **Receiver Email:** An email address that receives a notification when PhotoDNA finds *unacceptable* content. This address also receives notification when an error occurs during monitoring.
 - **Sender Email**: An email address from which the notifications will be sent.
-- **Storage Account Name:** The Name of the storage account resource group that this app will be added to, the same as the one selected from the drop down above labeled "Resource Group"
-- **Target Storage Blob Name:** This should be the name of the Storage blob that will be monitored. Uploading to this blob will trigger the function to scan all upload images.
-- **Subscription Endpoint:** A URL that was provided to you when you subscribed to Microsoft PhotoDNA. This is the URL to which your images will be uploaded and scanned. This URL is specific to your subscription. To find your personal PDNA Endpoint, [visit this page](https://testpdnaui.azurewebsites.net/).  
-- **Subscription Key:** A unique key that was provided to you when you subscribed to Microsoft PhotoDNA. This key is specific to your subscription, and should not be shared with other users. To find your personal PDNA key, [visit this page](https://testpdnaui.azurewebsites.net/ )  
+- **Photo DNA Subscription Endpoint:** A URL that was provided to you when you subscribed to Microsoft PhotoDNA. This is the URL to which your images will be uploaded and scanned. This URL is specific to your subscription. To find your personal PDNA Endpoint, [visit this page](https://testpdnaui.azurewebsites.net/).  
+- **Photo DNA Subscription Key:** A unique key that was provided to you when you subscribed to Microsoft PhotoDNA. This key is specific to your subscription, and should not be shared with other users. To find your personal PDNA key, [visit this page](https://testpdnaui.azurewebsites.net/ ) 
+- **Service Bus Unique Name** The service bus account name must be unique across Azure, pick an interesting unique name.
+- **Callback Endpoint:** A URL of *your* web service, which is capable of receiving JSON documents. If there is any error during monitoring, the stack will post the error to this endpoint. This field is optional. 
 
 Once the parameters have been added and you have verified they are correct, Accept the terms of services and select **"Purchase"** 
 
