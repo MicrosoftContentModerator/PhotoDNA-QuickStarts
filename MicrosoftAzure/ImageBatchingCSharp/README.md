@@ -1,9 +1,13 @@
 ## Azure Resource Deployment Guide ##
 
 
-This guide will lead you through the deployment of PhotoDNA Monitoring to your existing Blob-Storage accounts. This following template will create a Azure Function Application along with supporting resources that will allow that automatic monitoring of image uploads to your storage databases, checking their content for inappropriate content and letting you know if PhotoDNA finds anything suspicious. Before you start, download the following [.ZIP folder](https://github.com/MicrosoftContentModerator/PhotoDNA-QuickStarts/blob/dev/MicrosoftAzure/ImageBatchingCSharp/AzureFunction/PDNAMonitoringQueued.zip) and save it to a location you can access easily later on. 
+This guide will lead you through the deployment of PhotoDNA Monitoring to your existing Blob-Storage accounts. This following template will create a Azure Function Application along with supporting resources that will allow that automatic monitoring of image uploads to your storage databases, checking their content for inappropriate content and letting you know if PhotoDNA finds anything suspicious. 
 
 ![Simple Diagram](https://github.com/MicrosoftContentModerator/PhotoDNA-QuickStarts/blob/dev/MicrosoftAzure/ImageBatchingCSharp/Documentation/SimpleArchDiagramAZ_placeholder.png?raw=true)
+
+Before you start, download the following [.ZIP folder](https://github.com/MicrosoftContentModerator/PhotoDNA-QuickStarts/blob/dev/MicrosoftAzure/ImageBatchingCSharp/AzureFunction/PDNAMonitoringQueued.zip) and save it to a location you can access easily later on. You will need to have a SMTP mailer account such as [SendGrid](https://sendgrid.com/). Lastly, the Storage Container with your target Storage Blob (the one you want to be monitored by PDNA) needs to be publicly read-accessible. To check if it has the proper settings, navigate to the Storage Container in the Azure Portal, then click the button **Access Policy** and then select "Container"
+![](https://github.com/MicrosoftContentModerator/PhotoDNA-QuickStarts/blob/dev/MicrosoftAzure/ImageBatchingCSharp/Documentation/ReadAccessPolicy.PNG?raw=true)
+
 
 To being the process simply click
 [Launch](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FMicrosoftContentModerator%2FPhotoDNA-QuickStarts%2Fdev%2FMicrosoftAzure%2FImageBatchingCSharp%2FResourceGroupTemplate%2FresourceGroupTemplate.json "Deploy in Azure"). This will bring you to your Microsoft Azure account console deployment page. Fill out some information about your target Resource Group and PhotoDNA Subscription
@@ -38,7 +42,7 @@ Once the .ZIP has been uploaded, right click it and select **Extract All**
 
 
 It might take a few minutes for these new files to be installed properly, once they are completed, navigate back to the Function App Overview and expand the tab for the newly created BlobToQueue function (Not the PDNAMonitoring function, it should be fully set up automatically once the .ZIP is done compiling). Select the Integrate tab and you should see the following page. You must change the **Path** to have your targeted blob's name instead of the placeholder value (keep the "**/{name}.{ext}**" and just replace the text in front of the **/**).
-![](https://github.com/MicrosoftContentModerator/PhotoDNA-QuickStarts/blob/dev/MicrosoftAzure/ImageBatchingCSharp/Documentation/IntegrationPage.PNG?raw=true)
+![](https://github.com/MicrosoftContentModerator/PhotoDNA-QuickStarts/blob/dev/MicrosoftAzure/ImageBatchingCSharp/Documentation/EnterBlobNameIntegratePage.PNG?raw=true)
 
 
 Allow the function to update for a minute or two and once the new target is updated your blob will be automatically monitored by PhotoDNA

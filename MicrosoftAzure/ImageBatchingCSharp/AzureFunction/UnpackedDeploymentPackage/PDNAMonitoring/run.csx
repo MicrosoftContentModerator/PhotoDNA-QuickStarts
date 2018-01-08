@@ -88,16 +88,23 @@ using System.Net;
 									continue;
 								}
 
-								CloudBlockBlob blob = new CloudBlockBlob(uri);
-								HashedImage image = new HashedImage(blob.Name);
-								image.mess = mess;
+								try{
+                                                                        CloudBlockBlob blob = new CloudBlockBlob(uri);
+                                                                        HashedImage image = new HashedImage(blob.Name);
+                                                                        image.mess = mess;
+                                                                
+                                                        
+                                                                        Stream receiveStream = await blob.OpenReadAsync();
 
-								Stream receiveStream = await blob.OpenReadAsync();
+                                                                        image.value = PdnaClientHash.GenerateHash(receiveStream);
 
-								image.value = PdnaClientHash.GenerateHash(receiveStream);
+                                                                        receiveStream.Close();
+                                                                        hashes.Add(image);
+                                                                }
+                                                                catch(Exception e){
+                                                                        log.Verbose("Failed To read uri : " + uri + “Due to :”  + e.Message);
+                                                                }
 
-								receiveStream.Close();
-								hashes.Add(image);
 							}
 							else
 							{
