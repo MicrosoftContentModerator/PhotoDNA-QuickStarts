@@ -9,8 +9,12 @@ Before you start, download the following [.ZIP folder](https://github.com/Micros
 ![](https://github.com/MicrosoftContentModerator/PhotoDNA-QuickStarts/blob/dev/MicrosoftAzure/ImageBatchingCSharp/Documentation/ReadAccessPolicy.PNG?raw=true)
 
 
-To being the process simply click
-[Launch](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FMicrosoftContentModerator%2FPhotoDNA-QuickStarts%2Fdev%2FMicrosoftAzure%2FImageBatchingCSharp%2FResourceGroupTemplate%2FresourceGroupTemplate.json "Deploy in Azure"). This will bring you to your Microsoft Azure account console deployment page. Fill out some information about your target Resource Group and PhotoDNA Subscription
+
+---
+
+
+**To being the process simply click
+[Launch](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FMicrosoftContentModerator%2FPhotoDNA-QuickStarts%2Fdev%2FMicrosoftAzure%2FImageBatchingCSharp%2FResourceGroupTemplate%2FresourceGroupTemplate.json "Deploy in Azure")**. This will bring you to your Microsoft Azure account console deployment page. Fill out some information about your target Resource Group and PhotoDNA Subscription
 
 ![](https://github.com/MicrosoftContentModerator/PhotoDNA-QuickStarts/blob/dev/MicrosoftAzure/ImageBatchingCSharp/Documentation/TemplateLandingPage.PNG?raw=true)
 
@@ -45,4 +49,5 @@ It might take a few minutes for these new files to be installed properly, once t
 ![](https://github.com/MicrosoftContentModerator/PhotoDNA-QuickStarts/blob/dev/MicrosoftAzure/ImageBatchingCSharp/Documentation/EnterBlobNameIntegratePage.PNG?raw=true)
 
 
-Allow the function to update for a minute or two and once the new target is updated your blob will be automatically monitored by PhotoDNA
+Allow the function to update for a minute or two and once the new target is updated your blob will be automatically monitored by PhotoDNA.
+**Please NOTE** any images already existing in the blob at the time of install will be considered 'newly uploaded' and the application should immediately begin scanning those items from blob before resuming normal  timer-triggered functionality. 
