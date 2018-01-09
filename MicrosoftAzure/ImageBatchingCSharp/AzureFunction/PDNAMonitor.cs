@@ -31,7 +31,7 @@ namespace Microsoft.Ops.BlobMonitor
 
 				while ((DateTime.Now.Subtract(invocationTime)).Seconds < timeout)
 				{
-					var batch = receiver.ReceiveBatch(10);
+					var batch = receiver.ReceiveBatch(100);
 					if (batch == null)
 					{
 						log.Verbose("PDNAMonitor: Queue returned NULL and BREAK function");
