@@ -6,6 +6,7 @@
     <PackageReference Include="Microsoft.NET.Sdk.Functions" Version="1.0.2" />    
     <PackageReference Include="Microsoft.WindowsAzure.ConfigurationManager" Version="3.2.3" />    
     <PackageReference Include="Sendgrid" Version="9.9.0" />    
+    <PackageReference Include="System.Threading.Tasks.Parallel" Version="4.3.0" />    
     <PackageReference Include="WindowsAzure.ServiceBus.PerformanceCounters" Version="4.0.0" />
   </ItemGroup>
   <ItemGroup>

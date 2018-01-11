@@ -1,6 +1,8 @@
 using Microsoft.Azure.WebJobs.Host;
 using Microsoft.ServiceBus.Messaging;
+using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Blob;
+using Microsoft.WindowsAzure.Storage.Queue;
 using System;
 using System.Threading.Tasks;
 
@@ -18,8 +20,13 @@ namespace Microsoft.Ops.BlobMonitor
 			{
 				try
 				{
-					var senderFactory = MessagingFactory.CreateFromConnectionString(System.Environment.GetEnvironmentVariable("NamespaceConnectionString"));
-					var sender = await senderFactory.CreateMessageSenderAsync("pdnamonitoringimagequeue");
+					//var senderFactory = MessagingFactory.CreateFromConnectionString(System.Environment.GetEnvironmentVariable("NamespaceConnectionString"));
+					//var sender = await senderFactory.CreateMessageSenderAsync("pdnamonitoringimagequeue");
+					var storageAccount = CloudStorageAccount.Parse(System.Environment.GetEnvironmentVariable("AzureWebJobsStorage"));
+					var client = storageAccount.CreateCloudQueueClient();
+					var queue = client.GetQueueReference("pdnamonitoringimagequeue");
+					queue.CreateIfNotExists();
+
 					switch (ext)
 					{
 						case "png":
@@ -38,12 +45,11 @@ namespace Microsoft.Ops.BlobMonitor
 							log.Verbose("Not an image " + name);
 							return;
 					}
-
-					BrokeredMessage message = new BrokeredMessage();
-					message.Properties.Add("URI", myBlob.StorageUri.PrimaryUri.ToString());
+					
+					CloudQueueMessage message = new CloudQueueMessage(myBlob.StorageUri.PrimaryUri.ToString());
 					log.Verbose("BlobToQueue: Logged blob: " + myBlob.Name);
-					sender.Send(message);
-					sender.Close();
+					queue.AddMessage(message);
+					
 					return;
 				}
 				catch (Exception e)

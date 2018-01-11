@@ -8,42 +8,12 @@
 				"description": "the name of the storage account that will be monitored by the function app"
 			}
 		},
-		"functionAppName": {
-			"type": "string",
-			"metadata": {
-				"description": "name your new function that will be created"
-			}
-		},
-		"smtpHostAddress": {
-			"type": "string",
-			"metadata": {
-				"description": "The Host address used for your Simple Mail account"
-			}
-		},
-		"smtpPassword": {
-			"type": "string",
-			"metadata": {
-				"description": "The password created for your specific user for Simple Mail"
-			}
-		},
-		"smtpUserName": {
-			"type": "string",
-			"metadata": {
-				"description": "The user name used to create you Simple Mail account"
-			}
-		},
-		"notificationSenderEmail": {
-			"type": "string",
-			"metadata": {
-				"description": "The email account that will be used to send the notification emails."
-			}
-		},
-		"notificationReceiverEmail": {
-			"type": "string",
-			"metadata": {
-				"description": "The email that will receive notificaitons when PhotoDNA happens to find a match on images uploaded to your storage"
-			}
-		},
+    "functionAppName": {
+      "type": "string",
+      "metadata": {
+        "description": "name your new function that will be created"
+      }
+    },
 		"PhotoDNASubscriptionEndpoint": {
 			"type": "string",
 			"metadata": {
@@ -56,15 +26,68 @@
         "description": "Your unique PhotoDNA subscription key, this can be found here: "
       }
     },
-    "ServiceBusUniqueName": {
+    "emailOnHit":{
+      "type": "bool",
+      "metadata": {
+        "description": "With this selected, an email will be sent to the email designated below when PDNA finds a match. You must enter the following fields for this to functions: smtpHostAddress, smtpPassword, smtpUserName, notificationSenderEmail, and notificationReceiverEmail"
+      }
+    },
+    "emailOnError":{
+      "type": "bool",
+      "metadata": {
+        "description": "With this selected, an email will be sent to the email designated below when unexpected errors occur. You must enter the following fields for this to functions: smtpHostAddress, smtpPassword, smtpUserName, notificationSenderEmail, and notificationReceiverEmail"
+      }
+    },
+    "callbackOnHit":{
+      "type": "bool",
+      "metadata": {
+        "description": "With this selected, the application will Post to the address designated by the field 'callbackEndpoint' designated bellow when PDNA finds a match"
+      }
+    },
+    "callbackOnError":{
+      "type": "bool",
+      "metadata": {
+        "description": "With this selected, the application will Post to the address designated by the field 'callbackEndpoint' designated bellow when an unexpected error occurs"
+      }
+    },
+		"smtpHostAddress": {
 			"type": "string",
+      "defaultValue": "",
 			"metadata": {
-				"description": "The Name of the Service Bus that holds the queue, this must be globaly unique"
+				"description": "The Host address used for your Simple Mail account"
+			}
+		},
+		"smtpPassword": {
+			"type": "string",
+      "defaultValue": "",
+			"metadata": {
+				"description": "The password created for your specific user for Simple Mail"
+			}
+		},
+		"smtpUserName": {
+			"type": "string",
+      "defaultValue": "",
+			"metadata": {
+				"description": "The user name used to create you Simple Mail account"
+			}
+		},
+		"notificationSenderEmail": {
+			"type": "string",
+      "defaultValue": "",
+			"metadata": {
+				"description": "The email account that will be used to send the notification emails."
+			}
+		},
+		"notificationReceiverEmail": {
+			"type": "string",
+      "defaultValue": "",
+			"metadata": {
+				"description": "The email that will receive notificaitons when PhotoDNA happens to find a match on images uploaded to your storage"
 			}
 		},
 		"callbackEndpoint": {
 			"type": "string",
-      "defaultValue": "N/A",
+      "defaultValue": "",
 			"metadata": {
 				"description": "(optional) when PhotoDNA returns a match or errors occure, the results will be posted to this address"
 			}
@@ -82,61 +105,15 @@
     "smtpPassword": "[parameters('smtpPassword')]",
     "smtpUserName": "[parameters('smtpUserName')]",
     "imageQueueName": "pdnamonitoringimagequeue",
-    "serviceBusNamespace": "[parameters('ServiceBusUniqueName')]",
     "defaultSASKeyName": "RootManageSharedAccessKey",
-    "authRuleResourceId": "[resourceId('Microsoft.ServiceBus/namespaces/authorizationRules', parameters('ServiceBusUniqueName'), 'RootManageSharedAccessKey')]",
-	  "sbVersion": "2017-04-01"
+    "sbVersion": "2017-04-01",
+    "emailOnHit": "[parameters('emailOnHit')]",
+    "emailOnError":"[parameters('emailOnError')]",
+    "callbackOnHit":"[parameters('callbackOnHit')]",
+    "callbackOnError":"[parameters('callbackOnError')]"
 
 	},
 	"resources": [
-    {
-      "type": "Microsoft.ServiceBus/namespaces",
-      "sku": {
-        "name": "Basic",
-        "tier": "Basic"
-      },
-      "name": "[parameters('ServiceBusUniqueName')]",
-      "apiVersion": "2017-04-01",
-      "location": "Central US",
-      "tags": { },
-      "scale": null,
-      "properties": {
-        "provisioningState": "Created",
-        "metricId": "[concat('2a154f79-8247-4a91-b95b-bd68f15b46d0:', toLower(parameters('ServiceBusUniqueName')), parameters('ServiceBusUniqueName'))]",
-        "createdAt": "2018-01-04T22:22:46.09Z",
-        "updatedAt": "2018-01-04T22:22:46.09Z",
-        "serviceBusEndpoint": "[concat('https://', parameters('ServiceBusUniqueName'),'.servicebus.windows.net:443/')]"
-      },
-      "dependsOn": [ ]
-    },
-    {
-          "comments": "Generalized from resource: '/subscriptions/2a154f79-8247-4a91-b95b-bd68f15b46d0/resourcegroups/NEW/providers/Microsoft.ServiceBus/namespaces/PDNAMonitoringServiceBus/queues/imagequeue'.",
-          "type": "Microsoft.ServiceBus/namespaces/queues",
-          "name": "[concat(parameters('ServiceBusUniqueName'), '/', 'pdnamonitoringimagequeue')]",
-          "apiVersion": "2017-04-01",
-          "location": "Central US",
-          "scale": null,
-          "properties": {
-              "maxSizeInMegabytes": 1024,
-              "requiresDuplicateDetection": false,
-              "requiresSession": false,
-              "defaultMessageTimeToLive": "P1D",
-              "deadLetteringOnMessageExpiration": true,
-              "status": "Active",
-              "enablePartitioning": false,
-              "enableExpress": false,
-              "countDetails": {
-                  "activeMessageCount": 0,
-                  "deadLetterMessageCount": 0,
-                  "scheduledMessageCount": 0,
-                  "transferMessageCount": 0,
-                  "transferDeadLetterMessageCount": 0
-              }
-          },
-          "dependsOn": [
-              "[resourceId('Microsoft.ServiceBus/namespaces', parameters('ServiceBusUniqueName'))]"
-          ]
-      },			
         {
 						"apiVersion": "2016-08-01",
 						"kind": "functionapp",
@@ -228,8 +205,11 @@
                   "smtpHostAddress": "[parameters('smtpHostAddress')]",
                   "smtpPassword": "[parameters('smtpPassword')]",
                   "smtpUserName": "[parameters('smtpUserName')]",
-                  "NamespaceConnectionString": "[listkeys(variables('authRuleResourceId'), variables('sbVersion')).primaryConnectionString]",
-                  "imageQueueName": "pdnamonitoringimagequeue"
+                  "imageQueueName": "pdnamonitoringimagequeue",
+                  "emailOnHit": "[parameters('emailOnHit')]",
+                  "emailOnError":"[parameters('emailOnError')]",
+                  "callbackOnHit":"[parameters('callbackOnHit')]",
+                  "callbackOnError":"[parameters('callbackOnError')]"
 								}
 							}
 						],

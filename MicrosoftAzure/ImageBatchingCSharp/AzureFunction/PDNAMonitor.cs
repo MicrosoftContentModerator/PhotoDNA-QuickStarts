@@ -13,6 +13,8 @@ using Microsoft.WindowsAzure.Storage.Blob;
 using Microsoft.ServiceBus.Messaging;
 using System.Net;
 using Microsoft.Ops.Common.PreHashClient.CSharp;
+using Microsoft.WindowsAzure.Storage;
+using Microsoft.WindowsAzure.Storage.Queue;
 
 namespace Microsoft.Ops.BlobMonitor
 {
@@ -26,20 +28,26 @@ namespace Microsoft.Ops.BlobMonitor
 			try
 			{
 				DateTime invocationTime = DateTime.Now;
-				var receiverFactory = MessagingFactory.CreateFromConnectionString(System.Environment.GetEnvironmentVariable("NamespaceConnectionString", EnvironmentVariableTarget.Process));
-				var receiver = await receiverFactory.CreateMessageReceiverAsync("pdnamonitoringimagequeue", ReceiveMode.PeekLock);
+				//var receiverFactory = MessagingFactory.CreateFromConnectionString(System.Environment.GetEnvironmentVariable("NamespaceConnectionString", EnvironmentVariableTarget.Process));
+				//var receiver = await receiverFactory.CreateMessageReceiverAsync("pdnamonitoringimagequeue", ReceiveMode.PeekLock);
+
+				var storageAccount = CloudStorageAccount.Parse(System.Environment.GetEnvironmentVariable("AzureWebJobsStorage"));
+				var client = storageAccount.CreateCloudQueueClient();
+				var queue = client.GetQueueReference("pdnamonitoringimagequeue");
+				queue.CreateIfNotExists();
 
 				while ((DateTime.Now.Subtract(invocationTime)).Seconds < timeout)
 				{
-					var batch = receiver.ReceiveBatch(100);
+					// if the queue happens to return more than 10 batches, it will attempt too many batches at once and might overflow the PDNA limit
+					var batch = queue.GetMessages(15);
 					if (batch == null)
 					{
 						log.Verbose("PDNAMonitor: Queue returned NULL and BREAK function");
 						break;
 					}
 
-					List<List<BrokeredMessage>> BatchedSets = new List<List<BrokeredMessage>>();
-					List<BrokeredMessage> hashBatch = new List<BrokeredMessage>();
+					List<List<CloudQueueMessage>> BatchedSets = new List<List<CloudQueueMessage>>();
+					List<CloudQueueMessage> hashBatch = new List<CloudQueueMessage>();
 
 					int i = 0;
 					foreach (var mess in batch)
@@ -55,7 +63,7 @@ namespace Microsoft.Ops.BlobMonitor
 							BatchedSets.Add(hashBatch);
 
 							i = 0;
-							hashBatch = new List<BrokeredMessage>();
+							hashBatch = new List<CloudQueueMessage>();
 						}
 					}
                     if (hashBatch.Count > 0) BatchedSets.Add(hashBatch);
@@ -67,23 +75,25 @@ namespace Microsoft.Ops.BlobMonitor
 
 					List<Task> taskList = new List<Task>();
 
+					List<List<HashedImage>> hashedBatches = new List<List<HashedImage>>();
+
 					int batchCount = 0;
 					foreach (var batchedSet in BatchedSets)
 					{
 						List<HashedImage> hashes = new List<HashedImage>();
 						foreach (var mess in batchedSet)
 						{
-							if (mess.Properties.ContainsKey("URI"))
+							if ( !String.IsNullOrEmpty(mess.AsString) )
 							{
 								object url;
-								url = mess.Properties["URI"];
+								url = mess.AsString;
 								System.Uri uri = new Uri(url.ToString());
 								string ext = Path.GetExtension(uri.ToString());
 								if (!SupportedImageTypes.Contains(ext))
 								{
 									var msg = string.Format("PDNAMonitor: Not a supported image type, ignored: {0}", url.ToString());
 									log.Verbose(msg);
-									await mess.DeadLetterAsync();
+									await queue.DeleteMessageAsync(mess);
 									continue;
 								}
 
@@ -100,15 +110,18 @@ namespace Microsoft.Ops.BlobMonitor
 							}
 							else
 							{
-								await mess.DeadLetterAsync();
+									await queue.DeleteMessageAsync(mess);
 							}
+							hashedBatches.Add(hashes);
 						}
 
 						// make the batch call to pdna
-						taskList.Add(MakeRequest(hashes, log));
+						// taskList.Add(MakeRequest(hashes, log, queue));
 
-						await Task.Delay(100);
 					}
+
+					Parallel.ForEach(hashedBatches, hashGroup => MakeRequest(hashGroup, log, queue));
+					await Task.Delay(1000);
 
 					await Task.WhenAll(taskList);
 				}
@@ -127,7 +140,7 @@ namespace Microsoft.Ops.BlobMonitor
 			public string description = "";
 			public string key;
 			public string type = "file";
-			public BrokeredMessage mess;
+			public CloudQueueMessage mess;
 
 			public HashedImage(string fileName)
 			{
@@ -141,7 +154,7 @@ namespace Microsoft.Ops.BlobMonitor
 			public string value = "";
 		}
 
-		public static async Task MakeRequest(List<HashedImage> imageList, TraceWriter log)
+		public static async Task MakeRequest(List<HashedImage> imageList, TraceWriter log, CloudQueue queue)
 		{
 			try
 			{
@@ -178,7 +191,7 @@ namespace Microsoft.Ops.BlobMonitor
 
 					// process response
 					dynamic obj = JsonConvert.DeserializeObject(contents);
-					//log.Verbose("() () () Contents: " + contents);
+					log.Verbose("() () () Contents: " + contents);
 					foreach (var result in obj.MatchResults)
 					{
 						try
@@ -189,16 +202,16 @@ namespace Microsoft.Ops.BlobMonitor
 								{
 									var name = result.ContentId.ToString();
 									log.Verbose("PDNAMonitor: FOUND MATCH for img: " + name);
-									var mess = GetBrokeredMessage(imageList, name);
+									CloudQueueMessage mess = GetBrokeredMessage(imageList, name);
 									await MailNotification(response, name, log);
-									await mess.CompleteAsync();
+									await queue.DeleteMessageAsync(mess);
 								}
 								else if (result.IsMatch == "False")
 								{
 									var name = result.ContentId.ToString();
 									log.Verbose("PDNAMonitor: No match found for img: " + name);
-									var mess = GetBrokeredMessage(imageList, name);
-									await mess.CompleteAsync();
+									CloudQueueMessage mess = GetBrokeredMessage(imageList, name);
+									await queue.DeleteMessageAsync(mess);
 								}
 							}
 							else
@@ -207,8 +220,8 @@ namespace Microsoft.Ops.BlobMonitor
 
 								await MailNotificationError(await response.Content.ReadAsStringAsync(), log);
 								var name = result.ContentId.ToString();
-								var mess = GetBrokeredMessage(imageList, name);
-								await mess.AbandonAsync();
+								CloudQueueMessage mess = GetBrokeredMessage(imageList, name);
+								await queue.DeleteMessageAsync(mess);
 								throw new Exception(" .. the proper response was not found" + obj);
 							}
 						}
@@ -241,7 +254,7 @@ namespace Microsoft.Ops.BlobMonitor
 			}
 		}
 
-		private static BrokeredMessage GetBrokeredMessage(List<HashedImage> imageList, string name)
+		private static CloudQueueMessage GetBrokeredMessage(List<HashedImage> imageList, string name)
 		{
 			foreach (var image in imageList)
 			{
@@ -274,7 +287,9 @@ namespace Microsoft.Ops.BlobMonitor
 			try
 			{
 				string callbackEndPoint = System.Environment.GetEnvironmentVariable("callbackEndpoint", EnvironmentVariableTarget.Process);
-				if (callbackEndPoint != "N/A")
+				bool callbackOnHit = false;
+				if (System.Environment.GetEnvironmentVariable("callbackOnHit", EnvironmentVariableTarget.Process).ToLower() == "true") callbackOnHit = true;
+				if (callbackEndPoint != "" && callbackOnHit)
 				{
 					var postClient = new HttpClient();
 					var result = await message.Content.ReadAsStringAsync();
@@ -289,7 +304,6 @@ namespace Microsoft.Ops.BlobMonitor
 						response = await postClient.PostAsync(callbackEndPoint, content);
 					}
 				}
-
 			}
 			catch (Exception ex)
 			{
@@ -298,47 +312,53 @@ namespace Microsoft.Ops.BlobMonitor
 
 			try
 			{
-				//string fromEmail = System.Environment.GetEnvironmentVariable("senderEmail");
-				//string toEmail = System.Environment.GetEnvironmentVariable("receiverEmail");
-				string fromEmail = System.Environment.GetEnvironmentVariable("senderEmail", EnvironmentVariableTarget.Process);
-				string toEmail = System.Environment.GetEnvironmentVariable("receiverEmail", EnvironmentVariableTarget.Process);
-				int smtpPort = 587;
-				bool smtpEnableSsl = true;
-				string smtpHost = System.Environment.GetEnvironmentVariable("smtpHostAddress", EnvironmentVariableTarget.Process); // your smtp host
-				string smtpUser = System.Environment.GetEnvironmentVariable("smtpUserName", EnvironmentVariableTarget.Process); // your smtp user
-				string smtpPass = System.Environment.GetEnvironmentVariable("smtpPassword", EnvironmentVariableTarget.Process); // your smtp password
-				string subject = "Azure Image Content Warning from PhotoDNA";
-				string messageBody = "An image was uploaded to Azure which was flagged for innapropiate content by PhotoDNA...  the image file: " + name;
-
-				MailMessage mail = new MailMessage(fromEmail, toEmail);
-				SmtpClient client = new SmtpClient();
-				client.Port = smtpPort;
-				client.EnableSsl = smtpEnableSsl;
-				client.DeliveryMethod = SmtpDeliveryMethod.Network;
-				client.UseDefaultCredentials = false;
-				client.Host = smtpHost;
-				client.Credentials = new System.Net.NetworkCredential(smtpUser, smtpPass);
-				mail.Subject = subject;
-
-				mail.Priority = MailPriority.High;
-
-				mail.Body = messageBody;
-
-				try
+				bool emailOnHit = false;
+				if (System.Environment.GetEnvironmentVariable("emailOnHit", EnvironmentVariableTarget.Process).ToLower() == "true") emailOnHit = true;
+				if (emailOnHit)
 				{
-					client.Send(mail);
-					log.Verbose("**  ----  ----  ---- Email sent.");
-				}
-				catch (Exception ex)
-				{
-					log.Verbose("!!  ERROR ----  ---- The email was not sent.");
-					log.Verbose("!!  ERROR ----  ---- Error message: " + ex.Message + "| | |" + ex.StackTrace);
-					while (ex.InnerException != null)
+					//string fromEmail = System.Environment.GetEnvironmentVariable("senderEmail");
+					//string toEmail = System.Environment.GetEnvironmentVariable("receiverEmail");
+					string fromEmail = System.Environment.GetEnvironmentVariable("senderEmail", EnvironmentVariableTarget.Process);
+					string toEmail = System.Environment.GetEnvironmentVariable("receiverEmail", EnvironmentVariableTarget.Process);
+					int smtpPort = 587;
+					bool smtpEnableSsl = true;
+					string smtpHost = System.Environment.GetEnvironmentVariable("smtpHostAddress", EnvironmentVariableTarget.Process); // your smtp host
+					string smtpUser = System.Environment.GetEnvironmentVariable("smtpUserName", EnvironmentVariableTarget.Process); // your smtp user
+					string smtpPass = System.Environment.GetEnvironmentVariable("smtpPassword", EnvironmentVariableTarget.Process); // your smtp password
+					string subject = "Azure Image Content Warning from PhotoDNA";
+					string messageBody = "An image was uploaded to Azure which was flagged for innapropiate content by PhotoDNA...  the image file: " + name;
+
+					MailMessage mail = new MailMessage(fromEmail, toEmail);
+					SmtpClient client = new SmtpClient();
+					client.Port = smtpPort;
+					client.EnableSsl = smtpEnableSsl;
+					client.DeliveryMethod = SmtpDeliveryMethod.Network;
+					client.UseDefaultCredentials = false;
+					client.Host = smtpHost;
+					client.Credentials = new System.Net.NetworkCredential(smtpUser, smtpPass);
+					mail.Subject = subject;
+
+					mail.Priority = MailPriority.High;
+
+					mail.Body = messageBody;
+
+					try
 					{
+						client.Send(mail);
+						log.Verbose("**  ----  ----  ---- Email sent.");
+					}
+					catch (Exception ex)
+					{
+						log.Verbose("!!  ERROR ----  ---- The email was not sent.");
 						log.Verbose("!!  ERROR ----  ---- Error message: " + ex.Message + "| | |" + ex.StackTrace);
-						ex = ex.InnerException;
+						while (ex.InnerException != null)
+						{
+							log.Verbose("!!  ERROR ----  ---- Error message: " + ex.Message + "| | |" + ex.StackTrace);
+							ex = ex.InnerException;
+						}
 					}
 				}
+
 			}
 			catch (Exception ex)
 			{
@@ -353,7 +373,9 @@ namespace Microsoft.Ops.BlobMonitor
 			try
 			{
 				string callbackEndPoint = System.Environment.GetEnvironmentVariable("callbackEndpoint", EnvironmentVariableTarget.Process);
-				if (callbackEndPoint != "N/A")
+				bool callbackOnError = false;
+				if (System.Environment.GetEnvironmentVariable("callbackOnError", EnvironmentVariableTarget.Process).ToLower() == "true") callbackOnError = true;
+				if (callbackEndPoint != "" && callbackOnError)
 				{
 					var postClient = new HttpClient();
 					var result = err;
@@ -376,44 +398,50 @@ namespace Microsoft.Ops.BlobMonitor
 
 			try
 			{
-				log.Verbose("!!  ---- ERROR  ---- FOUND");
-
-				//string fromEmail = System.Environment.GetEnvironmentVariable("senderEmail");
-				//string toEmail = System.Environment.GetEnvironmentVariable("receiverEmail");
-				string fromEmail = System.Environment.GetEnvironmentVariable("senderEmail", EnvironmentVariableTarget.Process);
-				string toEmail = System.Environment.GetEnvironmentVariable("receiverEmail", EnvironmentVariableTarget.Process);
-				int smtpPort = 587;
-				bool smtpEnableSsl = true;
-				string smtpHost = System.Environment.GetEnvironmentVariable("smtpHostAddress", EnvironmentVariableTarget.Process); // your smtp host
-				string smtpUser = System.Environment.GetEnvironmentVariable("smtpUserName", EnvironmentVariableTarget.Process); // your smtp user
-				string smtpPass = System.Environment.GetEnvironmentVariable("smtpPassword", EnvironmentVariableTarget.Process); // your smtp password
-				string subject = "Error was thrown by PhotoDNA Monitoring";
-				string messageBody = "An error was thrown attempting to scan an object uploaded to your blob storage account. " + err;
-
-				MailMessage mail = new MailMessage(fromEmail, toEmail);
-				SmtpClient client = new SmtpClient();
-				client.Port = smtpPort;
-				client.EnableSsl = smtpEnableSsl;
-				client.DeliveryMethod = SmtpDeliveryMethod.Network;
-				client.UseDefaultCredentials = false;
-				client.Host = smtpHost;
-				client.Credentials = new System.Net.NetworkCredential(smtpUser, smtpPass);
-				mail.Subject = subject;
-
-				mail.Priority = MailPriority.High;
-
-				mail.Body = messageBody;
-
-				try
+				bool emailOnError = false;
+				if (System.Environment.GetEnvironmentVariable("emailOnError", EnvironmentVariableTarget.Process).ToLower() == "true") emailOnError = true;
+				if (emailOnError)
 				{
-					client.Send(mail);
-					log.Verbose("Email sent.");
+					log.Verbose("!!  ---- ERROR  ---- FOUND");
+
+					//string fromEmail = System.Environment.GetEnvironmentVariable("senderEmail");
+					//string toEmail = System.Environment.GetEnvironmentVariable("receiverEmail");
+					string fromEmail = System.Environment.GetEnvironmentVariable("senderEmail", EnvironmentVariableTarget.Process);
+					string toEmail = System.Environment.GetEnvironmentVariable("receiverEmail", EnvironmentVariableTarget.Process);
+					int smtpPort = 587;
+					bool smtpEnableSsl = true;
+					string smtpHost = System.Environment.GetEnvironmentVariable("smtpHostAddress", EnvironmentVariableTarget.Process); // your smtp host
+					string smtpUser = System.Environment.GetEnvironmentVariable("smtpUserName", EnvironmentVariableTarget.Process); // your smtp user
+					string smtpPass = System.Environment.GetEnvironmentVariable("smtpPassword", EnvironmentVariableTarget.Process); // your smtp password
+					string subject = "Error was thrown by PhotoDNA Monitoring";
+					string messageBody = "An error was thrown attempting to scan an object uploaded to your blob storage account. " + err;
+
+					MailMessage mail = new MailMessage(fromEmail, toEmail);
+					SmtpClient client = new SmtpClient();
+					client.Port = smtpPort;
+					client.EnableSsl = smtpEnableSsl;
+					client.DeliveryMethod = SmtpDeliveryMethod.Network;
+					client.UseDefaultCredentials = false;
+					client.Host = smtpHost;
+					client.Credentials = new System.Net.NetworkCredential(smtpUser, smtpPass);
+					mail.Subject = subject;
+
+					mail.Priority = MailPriority.High;
+
+					mail.Body = messageBody;
+
+					try
+					{
+						client.Send(mail);
+						log.Verbose("Email sent.");
+					}
+					catch (Exception ex)
+					{
+						log.Verbose("!!  ERROR ----  ---- The email was not sent.");
+						log.Verbose("!!  ERROR ----  ---- Error message: " + ex.Message);
+					}
 				}
-				catch (Exception ex)
-				{
-					log.Verbose("!!  ERROR ----  ---- The email was not sent.");
-					log.Verbose("!!  ERROR ----  ---- Error message: " + ex.Message);
-				}
+				
 			}
 			catch (Exception ex)
 			{
