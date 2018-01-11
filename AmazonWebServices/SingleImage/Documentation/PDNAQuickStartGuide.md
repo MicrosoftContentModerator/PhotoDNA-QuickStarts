@@ -31,7 +31,7 @@ Click **Next** to continue.
 
 **4)**	Next page is the "Review" page. Double-check the parameters and other options selected during the above process. Then acknowledge the terms and click the **‘Create,’** button. Your stack will then be created.
 
-**5)**	Once the stack creation completes (this may take several minutes), navigate to your [Amazon S3 management page](https://s3.console.aws.amazon.com/s3) and select any bucket you want monitored by PhotoDNA.
+**5)**	Once the stack creation completes (this may take several minutes), navigate to your [Amazon S3 management page](https://s3.console.aws.amazon.com/s3) and select any bucket you want monitored by PhotoDNA. If you do not already have a bucket, you can create one by following the instructions found [here](https://docs.aws.amazon.com/AmazonS3/latest/gsg/CreatingABucket.html).
 
 **6)**	From the bucket landing page, Select **Properties**, then **Events**
 
@@ -41,8 +41,8 @@ Click **Next** to continue.
 ![](https://github.com/MicrosoftContentModerator/PhotoDNA-QuickStarts/blob/dev/AmazonWebServices/SingleImage/Documentation/EventPageLambdaTarget.PNG?raw=true)
 - **Name:** A name for your event (you can provide any name you want)
 - Select **Put and Post** (this indicates that you want to monitor both create as well as update of images in this bucket)
-- Select **SNS Topic** under the “**Send To**” dropdown
-- Select the **Lambda Function** created by the stack (The function name will begin with the stack name that you provided in the second step above)
+- Select **Lambda Function** under the “**Send To**” dropdown
+- Select the **Lambda Function created by the stack** (The function name will begin with the stack name that you provided in the second step above)
 
 **8)**	Select **Save**
 Your bucket is now ready to be monitored by PDNA, repeat steps 6-8 for each bucket you want monitored by PDNAs services. 
