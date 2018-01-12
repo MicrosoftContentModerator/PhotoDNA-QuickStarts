@@ -25,6 +25,7 @@ using System.Net;
 		static int timeout = 280;
 
 		public static async void Run(TimerInfo myTimer, TraceWriter log)
+		public static async void Run(TimerInfo myTimer, TraceWriter log)
 		{
 			try
 			{
@@ -75,15 +76,13 @@ using System.Net;
 							hashBatch = new List<CloudQueueMessage>();
 						}
 					}
-                    		if (hashBatch.Count > 0) BatchedSets.Add(hashBatch);
+                    if (hashBatch.Count > 0) BatchedSets.Add(hashBatch);
 					if (BatchedSets.Count == 0)
 					{
 						logger.Verbose("PDNAMonitor: Building Batch returned NO BATCHES:: break and stop");
 						break;
 					}
-
-					List<Task> taskList = new List<Task>();
-
+					
 					List<List<HashedImage>> hashedBatches = new List<List<HashedImage>>();
 
 					int batchCount = 0;
@@ -130,14 +129,8 @@ using System.Net;
 					}
 
 					var loop = Parallel.ForEach(hashedBatches, async hashGroup => await MakeRequest(hashGroup, logger, queue));
-					while (!loop.IsCompleted)
-					{
-						await Task.Delay(10);
-					}
 
-					taskList.Add( Task.Delay(400) );
-
-					await Task.WhenAll(taskList);
+					await Task.Delay(100 * hashedBatches.Count);
 				}
 
 			}
@@ -369,7 +362,7 @@ using System.Net;
 				string smtpUser = System.Environment.GetEnvironmentVariable("smtpUserName", EnvironmentVariableTarget.Process); // your smtp user
 				string smtpPass = System.Environment.GetEnvironmentVariable("smtpPassword", EnvironmentVariableTarget.Process); // your smtp password
 				string subject = "Azure Image Content Warning from PhotoDNA";
-				string messageBody = "An image was uploaded to Azure which was flagged for innapropiate content by PhotoDNA...  the image file: " + name;
+				string messageBody = "An image was uploaded to Azure which was flagged for innapropiate content by PhotoDNA...  the image file: " + name + ". The File was uploaded to the targetBlob: " + System.Environment.GetEnvironmentVariable("receiverEmail", EnvironmentVariableTarget.Process);
 
 				MailMessage mail = new MailMessage(fromEmail, toEmail);
 				SmtpClient client = new SmtpClient();
