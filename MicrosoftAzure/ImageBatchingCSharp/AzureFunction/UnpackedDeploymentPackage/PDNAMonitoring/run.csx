@@ -25,7 +25,6 @@ using System.Net;
 		static int timeout = 280;
 
 		public static async void Run(TimerInfo myTimer, TraceWriter log)
-		public static async void Run(TimerInfo myTimer, TraceWriter log)
 		{
 			try
 			{
