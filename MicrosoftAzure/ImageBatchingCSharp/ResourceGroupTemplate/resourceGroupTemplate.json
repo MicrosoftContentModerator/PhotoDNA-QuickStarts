@@ -29,7 +29,7 @@
     "logVerbose":{
       "type": "bool",
       "metadata": {
-        "description": "With this set to True, the function will Log each step of its execution in the Logs available in the Azure portal, with it set to false the function will not Log its execution except on Being Execution and on Errors"
+        "description": "With this set to True, the function will Log each step of its execution in the Logs available in the Azure portal, with it set to false the function will not Log its execution except on Begin and End Execution and on Errors"
       }
     },
 		"smtpHostAddress": {
