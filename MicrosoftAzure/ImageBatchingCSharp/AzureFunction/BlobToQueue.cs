@@ -10,8 +10,16 @@ namespace Microsoft.Ops.BlobMonitor
 {
 	public static class BlobToQueue
 	{
-		public static async void Run(CloudBlockBlob myBlob, string name, string ext, TraceWriter log)
+		public static async void Run(CloudBlockBlob myBlob, string name, string ext, TraceWriter logger)
 		{
+			var log = new OptionalLogger();
+			log.logs = logger;
+
+			bool logsetup = true;
+			if (System.Environment.GetEnvironmentVariable("logVerbose").ToLower() == "false") logsetup = false;
+
+			log.logging = logsetup;
+
 			log.Verbose("BlobToQueue: StartLogging: " + name);
 			int MaxtryAttempts = 1000;
 			int tryAttempts = 1;
@@ -77,6 +85,20 @@ namespace Microsoft.Ops.BlobMonitor
 
 			// reached max retry attempts
 			log.Verbose("BlobToQueue: ERROR 2.. Met max retry attempts blob to queue trigger :" + myBlob.Name);
+		}
+
+		public class OptionalLogger
+		{
+			public TraceWriter logs { get; set; }
+			public bool logging { get; set; }
+
+			public void Verbose(string input)
+			{
+				if (logging)
+				{
+					logs.Verbose(input);
+				}
+			}
 		}
 	}
 }

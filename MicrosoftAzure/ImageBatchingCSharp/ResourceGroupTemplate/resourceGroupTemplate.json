@@ -26,61 +26,38 @@
         "description": "Your unique PhotoDNA subscription key, this can be found here: "
       }
     },
-    "emailOnHit":{
+    "logVerbose":{
       "type": "bool",
       "metadata": {
-        "description": "With this selected, an email will be sent to the email designated below when PDNA finds a match. You must enter the following fields for this to functions: smtpHostAddress, smtpPassword, smtpUserName, notificationSenderEmail, and notificationReceiverEmail"
-      }
-    },
-    "emailOnError":{
-      "type": "bool",
-      "metadata": {
-        "description": "With this selected, an email will be sent to the email designated below when unexpected errors occur. You must enter the following fields for this to functions: smtpHostAddress, smtpPassword, smtpUserName, notificationSenderEmail, and notificationReceiverEmail"
-      }
-    },
-    "callbackOnHit":{
-      "type": "bool",
-      "metadata": {
-        "description": "With this selected, the application will Post to the address designated by the field 'callbackEndpoint' designated bellow when PDNA finds a match"
-      }
-    },
-    "callbackOnError":{
-      "type": "bool",
-      "metadata": {
-        "description": "With this selected, the application will Post to the address designated by the field 'callbackEndpoint' designated bellow when an unexpected error occurs"
+        "description": "With this selected, the function application will Log its execution steps which will be visible in the azure portal under the function app"
       }
     },
 		"smtpHostAddress": {
 			"type": "string",
-      "defaultValue": "",
 			"metadata": {
 				"description": "The Host address used for your Simple Mail account"
 			}
 		},
 		"smtpPassword": {
 			"type": "string",
-      "defaultValue": "",
 			"metadata": {
 				"description": "The password created for your specific user for Simple Mail"
 			}
 		},
 		"smtpUserName": {
 			"type": "string",
-      "defaultValue": "",
 			"metadata": {
 				"description": "The user name used to create you Simple Mail account"
 			}
 		},
 		"notificationSenderEmail": {
 			"type": "string",
-      "defaultValue": "",
 			"metadata": {
 				"description": "The email account that will be used to send the notification emails."
 			}
 		},
 		"notificationReceiverEmail": {
 			"type": "string",
-      "defaultValue": "",
 			"metadata": {
 				"description": "The email that will receive notificaitons when PhotoDNA happens to find a match on images uploaded to your storage"
 			}
@@ -107,11 +84,7 @@
     "imageQueueName": "pdnamonitoringimagequeue",
     "defaultSASKeyName": "RootManageSharedAccessKey",
     "sbVersion": "2017-04-01",
-    "emailOnHit": "[parameters('emailOnHit')]",
-    "emailOnError":"[parameters('emailOnError')]",
-    "callbackOnHit":"[parameters('callbackOnHit')]",
-    "callbackOnError":"[parameters('callbackOnError')]"
-
+    "logVerbose": "[parameters('logVerbose')]"
 	},
 	"resources": [
         {
@@ -206,10 +179,7 @@
                   "smtpPassword": "[parameters('smtpPassword')]",
                   "smtpUserName": "[parameters('smtpUserName')]",
                   "imageQueueName": "pdnamonitoringimagequeue",
-                  "emailOnHit": "[parameters('emailOnHit')]",
-                  "emailOnError":"[parameters('emailOnError')]",
-                  "callbackOnHit":"[parameters('callbackOnHit')]",
-                  "callbackOnError":"[parameters('callbackOnError')]"
+                  "logVerbose": "[parameters('logVerbose')]"
 								}
 							}
 						],
