@@ -5,7 +5,9 @@ This guide will lead you through the deployment of PhotoDNA Monitoring to your e
 
 ![Simple Diagram](https://github.com/MicrosoftContentModerator/PhotoDNA-QuickStarts/blob/dev/MicrosoftAzure/ImageBatchingCSharp/Documentation/SimpleArchDiagramAZ_placeholder.png?raw=true)
 
-Before you start, download the following [.ZIP folder](https://github.com/MicrosoftContentModerator/PhotoDNA-QuickStarts/blob/dev/MicrosoftAzure/ImageBatchingCSharp/AzureFunction/PDNAMonitoringQueued.zip) and save it to a location you can access easily later on. You will need to have a SMTP mailer account such as [SendGrid](https://sendgrid.com/). Lastly, the Storage Container with your target Storage Blob (the one you want to be monitored by PDNA) needs to be publicly read-accessible. To check if it has the proper settings, navigate to the Storage Container in the Azure Portal, then click the button **Access Policy** and then select "Container"
+The Template bellow will create a number of resources in your Azure account. It will create a Funciton Application with two functions: A logging function called BlobToQueue which will log image uploads to a storage queue (also created by the template) for the second function, PDNAMonitoring, which will take those requests, process them, and send them to PhotoDNA for scanning. The results of the scan will be returned and you will be informed if anything is amiss via the email you proved during setup.
+
+Before you start, download the following [.ZIP folder](https://github.com/MicrosoftContentModerator/PhotoDNA-QuickStarts/blob/dev/MicrosoftAzure/ImageBatchingCSharp/AzureFunction/PDNAMonitoringQueued.zip) and save it to a location you can access easily later on. You will need to have a SMTP mailer account such as [SendGrid](https://sendgrid.com/). Lastly, the Storage Container with your target Storage Blob (the one you want to be monitored by PDNA) needs to be publicly read-accessible. To check if it has the proper settings, navigate to the Storage Container in the Azure Portal, then click the button **Access Policy** and then select "Container."
 ![](https://github.com/MicrosoftContentModerator/PhotoDNA-QuickStarts/blob/dev/MicrosoftAzure/ImageBatchingCSharp/Documentation/ReadAccessPolicy.PNG?raw=true)
 
 
@@ -21,20 +23,20 @@ Before you start, download the following [.ZIP folder](https://github.com/Micros
 
 - **Target Storage Account Name:** The Name of the storage account resource group that this app will be added to, the same as the one selected from the drop down above labeled "Resource Group"
 - **Function App Name:** The name of the Function App resource that will be created.
+- **Photo DNA Subscription Endpoint:** A URL that was provided to you when you subscribed to Microsoft PhotoDNA. This is the URL to which your images will be uploaded and scanned. This URL is specific to your subscription. To find your personal PDNA Endpoint, [visit this page](https://testpdnaui.azurewebsites.net/).  
+- **Photo DNA Subscription Key:** A unique key that was provided to you when you subscribed to Microsoft PhotoDNA. This key is specific to your subscription, and should not be shared with other users. To find your personal PDNA key, [visit this page](https://testpdnaui.azurewebsites.net/ ) 
+- **logVerbose:** This is a true/false option that, when set to true, will have the functions log the steps of their execution in Azure's function logs that are available to view within the function app section of the Azure Portal. With it set to false, the function will only log on Start and End of execution and on errors.  
 - **SMTP Host Address** The host address used by your SMTP mailer account. For example SendGrid's host address will be similar to:  "smtp.sendgrid.net"
 - **SMTP Password** The password used to login to your SMPT account with the user name bellow.
 - **SMTP User Name** The user name for your SMTP account.
 - **Receiver Email:** An email address that receives a notification when PhotoDNA finds *unacceptable* content. This address also receives notification when an error occurs during monitoring.
 - **Sender Email**: An email address from which the notifications will be sent.
-- **Photo DNA Subscription Endpoint:** A URL that was provided to you when you subscribed to Microsoft PhotoDNA. This is the URL to which your images will be uploaded and scanned. This URL is specific to your subscription. To find your personal PDNA Endpoint, [visit this page](https://testpdnaui.azurewebsites.net/).  
-- **Photo DNA Subscription Key:** A unique key that was provided to you when you subscribed to Microsoft PhotoDNA. This key is specific to your subscription, and should not be shared with other users. To find your personal PDNA key, [visit this page](https://testpdnaui.azurewebsites.net/ ) 
-- **Service Bus Unique Name** The service bus account name must be unique across Azure, pick an interesting unique name.
 - **Callback Endpoint:** A URL of *your* web service, which is capable of receiving JSON documents. If there is any error during monitoring, the stack will post the error to this endpoint. This field is optional. 
 
 Once the parameters have been added and you have verified they are correct, Accept the terms of services and select **"Purchase"** 
 
 Once the Resource Group has completed Deployment, navigate to your accounts **Function App Tab** and select the newly created app name. 
-Once on the landing page, Select the** Platomm Features **Tab, then Select **"App Service Editor"** near the bottom.
+Once on the landing page, Select the** Platorm Features **Tab, then Select **"App Service Editor"** near the bottom.
 ![](https://github.com/MicrosoftContentModerator/PhotoDNA-QuickStarts/blob/dev/MicrosoftAzure/ImageBatchingCSharp/Documentation/FunctionAppNavigation.PNG?raw=true)
 
 Once the App Service Editor has loaded you can upload the function deployment package to the Function App by hovering over the WWWROOT label and clicking the "more" menu (marked "...") and then select **Upload Files**

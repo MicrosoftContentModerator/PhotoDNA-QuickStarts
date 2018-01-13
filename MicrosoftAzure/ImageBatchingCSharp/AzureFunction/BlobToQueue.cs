@@ -28,8 +28,6 @@ namespace Microsoft.Ops.BlobMonitor
 			{
 				try
 				{
-					//var senderFactory = MessagingFactory.CreateFromConnectionString(System.Environment.GetEnvironmentVariable("NamespaceConnectionString"));
-					//var sender = await senderFactory.CreateMessageSenderAsync("pdnamonitoringimagequeue");
 					var storageAccount = CloudStorageAccount.Parse(System.Environment.GetEnvironmentVariable("AzureWebJobsStorage"));
 					var client = storageAccount.CreateCloudQueueClient();
 					var queue = client.GetQueueReference("pdnamonitoringimagequeue");

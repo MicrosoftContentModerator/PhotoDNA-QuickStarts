@@ -324,7 +324,7 @@ namespace Microsoft.Ops.BlobMonitor
 			try
 			{   // POST the response message to the optional callback endpoint
 				string callbackEndPoint = System.Environment.GetEnvironmentVariable("callbackEndpoint", EnvironmentVariableTarget.Process);
-				if (callbackEndPoint != "" || callbackEndPoint != "N/A")
+				if (callbackEndPoint != "" && callbackEndPoint != "N/A")
 				{
 					var postClient = new HttpClient();
 					var result = await message.Content.ReadAsStringAsync();
@@ -356,7 +356,7 @@ namespace Microsoft.Ops.BlobMonitor
 				string smtpUser = System.Environment.GetEnvironmentVariable("smtpUserName", EnvironmentVariableTarget.Process); // your smtp user
 				string smtpPass = System.Environment.GetEnvironmentVariable("smtpPassword", EnvironmentVariableTarget.Process); // your smtp password
 				string subject = "Azure Image Content Warning from PhotoDNA";
-				string messageBody = "An image was uploaded to Azure which was flagged for innapropiate content by PhotoDNA...  the image file: " + name + ". The File was uploaded to the targetBlob: " + System.Environment.GetEnvironmentVariable("receiverEmail", EnvironmentVariableTarget.Process);
+				string messageBody = "An image was uploaded to Azure which was flagged for innapropiate content by PhotoDNA...  the image file: " + name + ". The File was uploaded to the storage account: " + System.Environment.GetEnvironmentVariable("targetStorageAccountName", EnvironmentVariableTarget.Process);
 
 				MailMessage mail = new MailMessage(fromEmail, toEmail);
 				SmtpClient client = new SmtpClient();
@@ -425,7 +425,7 @@ namespace Microsoft.Ops.BlobMonitor
 
 			try
 			{
-				// EMAIL 'Hit' notification to the given email address via the given SMTP mailer account
+				// EMAIL 'Error' notification to the given email address via the given SMTP mailer account
 				// Build emailer parameteres / body
 				string fromEmail = System.Environment.GetEnvironmentVariable("senderEmail", EnvironmentVariableTarget.Process);
 				string toEmail = System.Environment.GetEnvironmentVariable("receiverEmail", EnvironmentVariableTarget.Process);
@@ -435,7 +435,7 @@ namespace Microsoft.Ops.BlobMonitor
 				string smtpUser = System.Environment.GetEnvironmentVariable("smtpUserName", EnvironmentVariableTarget.Process); // your smtp user
 				string smtpPass = System.Environment.GetEnvironmentVariable("smtpPassword", EnvironmentVariableTarget.Process); // your smtp password
 				string subject = "Error was thrown by PhotoDNA Monitoring";
-				string messageBody = "An error was thrown attempting to scan an object uploaded to your blob storage account. " + err;
+				string messageBody = "An error was thrown attempting to scan an object uploaded to your blob storage account. " + err + ". </br> The File was uploaded to the storage account: " + System.Environment.GetEnvironmentVariable("targetStorageAccountName", EnvironmentVariableTarget.Process); ;
 
 				MailMessage mail = new MailMessage(fromEmail, toEmail);
 				SmtpClient client = new SmtpClient();
