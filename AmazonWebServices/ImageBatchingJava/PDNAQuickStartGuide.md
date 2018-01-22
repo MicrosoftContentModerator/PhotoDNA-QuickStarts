@@ -46,9 +46,11 @@ for **Rule type** select **Scheduled Expression**
 and in the scheduled expression field copy the following:
 	rate(5 minutes)
 
+![](https://github.com/MicrosoftContentModerator/PhotoDNA-QuickStarts/blob/dev/AmazonWebServices/ImageBatchingJava/ConfigureAlarm.PNG?raw=true)
+
 Select Add at the bottom, then in the top left of the Lambda section select **Save**
 
-//Put picture here
+
 
  
 Your bucket is now ready to be monitored by PDNA, repeat steps 6-8 for each bucket you want monitored by PDNAs services. 
