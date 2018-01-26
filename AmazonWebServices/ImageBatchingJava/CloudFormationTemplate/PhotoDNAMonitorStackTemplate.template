@@ -24,10 +24,6 @@
         "SenderEmailAddress": {
             "Type": "String",
             "Description": "The Email address that will be used to send notifications when PDNA finds an image match. This needs to be an email that has been verified by Amazon https://us-west-2.console.aws.amazon.com/ses/#verified-senders-email:"
-        },
-        "CallbackEndpoint": {
-            "Type": "String",
-            "Description": "(optional) If the processing of an item fails, the error and message body responsible will be posted to this URL if assigned"
         }
     },
     "Metadata": {
@@ -120,9 +116,6 @@
                     "Variables": {
                         "subscriptionEndpoint": {
                             "Ref": "PhotoDNAEndpoint"
-                        },
-                        "callbackEndpoint": {
-                            "Ref": "CallbackEndpoint"
                         },
                         "subscriptionKey": {
                             "Ref": "PhotoDNAKey"
