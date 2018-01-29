@@ -12,7 +12,9 @@ using System.Net.Http.Headers;
 using Microsoft.Azure.WebJobs;
 using Newtonsoft.Json;
 using Microsoft.Azure.WebJobs.Host;
+using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Blob;
+using Microsoft.WindowsAzure.Storage.Queue;
 using Microsoft.ServiceBus.Messaging;
 using Microsoft.Ops.Common.PreHashClient.CSharp;
 using System.Text;
@@ -22,28 +24,42 @@ using System.Net;
 		static HashSet<string> SupportedImageTypes { get; } = new HashSet<string> { ".png", ".gif", ".jpeg", ".jpg", ".tiff", ".bmp" };
 		static int timeout = 280;
 
-		public static async void Run(TimerInfo myTimer, TraceWriter log)
+				public static async void Run(TimerInfo myTimer, TraceWriter log)
 		{
 			try
 			{
-				DateTime invocationTime = DateTime.Now;
-				var receiverFactory = MessagingFactory.CreateFromConnectionString(System.Environment.GetEnvironmentVariable("NamespaceConnectionString", EnvironmentVariableTarget.Process));
-				var receiver = await receiverFactory.CreateMessageReceiverAsync("pdnamonitoringimagequeue", ReceiveMode.PeekLock);
+				var logger = new OptionalLogger();
+				logger.logs = log;
+
+				bool logsetup = true;
+				if( System.Environment.GetEnvironmentVariable("logVerbose").ToLower() == "false") logsetup = false;
+
+				logger.logging = logsetup;
+				// This is all just setting up the logging for the function, so that if the user elects to not logging the procesdure, nothing will be logged to the tracewriter.
+
+
+				DateTime invocationTime = DateTime.Now; // this will be used to stop to process after ~4:45 so the next trigger will not spawn an overlapping function
+				
+				var storageAccount = CloudStorageAccount.Parse(System.Environment.GetEnvironmentVariable("AzureWebJobsStorage"));
+				var client = storageAccount.CreateCloudQueueClient();
+				var queue = client.GetQueueReference("pdnamonitoringimagequeue");
+				queue.CreateIfNotExists();
 
 				while ((DateTime.Now.Subtract(invocationTime)).Seconds < timeout)
 				{
-					var batch = receiver.ReceiveBatch(10);
+					// if the queue doesnt not always return this number, sometime more or less. we make up for this inconsistency with a task.delay of 100 (1/10th of a second) for each group/request at the end of this while loop
+					var batch = queue.GetMessages(15);
 					if (batch == null)
 					{
-						log.Verbose("PDNAMonitor: Queue returned NULL and BREAK function");
+						logger.Verbose("PDNAMonitor: Queue returned NULL and BREAK function");
 						break;
 					}
 
-					List<List<BrokeredMessage>> BatchedSets = new List<List<BrokeredMessage>>();
-					List<BrokeredMessage> hashBatch = new List<BrokeredMessage>();
+					List<List<CloudQueueMessage>> BatchedSets = new List<List<CloudQueueMessage>>();
+					List<CloudQueueMessage> hashBatch = new List<CloudQueueMessage>();
 
 					int i = 0;
-					foreach (var mess in batch)
+					foreach (var mess in batch) //this loop seperates the batch of messages into groups of five called hashBatch
 					{
 						if (i < 4)
 						{
@@ -56,17 +72,17 @@ using System.Net;
 							BatchedSets.Add(hashBatch);
 
 							i = 0;
-							hashBatch = new List<BrokeredMessage>();
+							hashBatch = new List<CloudQueueMessage>();
 						}
 					}
-					if (hashBatch.Count > 0) BatchedSets.Add(hashBatch);
+                    if (hashBatch.Count > 0) BatchedSets.Add(hashBatch); //finish the loop and cleanup, adds the last incomplete group, checks to see if no groups were created and if so quits
 					if (BatchedSets.Count == 0)
 					{
-						log.Verbose("PDNAMonitor: Building Batch returned NO BATCHES:: break and stop");
+						logger.Verbose("PDNAMonitor: Building Batch returned NO BATCHES:: break and stop");
 						break;
 					}
-
-					List<Task> taskList = new List<Task>();
+					
+					List<List<HashedImage>> hashedBatches = new List<List<HashedImage>>();  // we'll now take the groups 'BatchedSets' and hash each image. returning a list of groups of 5 hashed images
 
 					int batchCount = 0;
 					foreach (var batchedSet in BatchedSets)
@@ -74,51 +90,44 @@ using System.Net;
 						List<HashedImage> hashes = new List<HashedImage>();
 						foreach (var mess in batchedSet)
 						{
-							if (mess.Properties.ContainsKey("URI"))
+							if ( !String.IsNullOrEmpty(mess.AsString) )
 							{
 								object url;
-								url = mess.Properties["URI"];
+								url = mess.AsString;
 								System.Uri uri = new Uri(url.ToString());
 								string ext = Path.GetExtension(uri.ToString());
-								if (!SupportedImageTypes.Contains(ext))
+								if (!SupportedImageTypes.Contains(ext))           //this may not be nessicary as the BlobToQueue function also checks the uploaded blobs for supported file types.
 								{
 									var msg = string.Format("PDNAMonitor: Not a supported image type, ignored: {0}", url.ToString());
 									log.Verbose(msg);
-									await mess.DeadLetterAsync();
+									await queue.DeleteMessageAsync(mess);
 									continue;
 								}
 
-								try{
-                                                                        CloudBlockBlob blob = new CloudBlockBlob(uri);
-                                                                        HashedImage image = new HashedImage(blob.Name);
-                                                                        image.mess = mess;
-                                                                
-                                                        
-                                                                        Stream receiveStream = await blob.OpenReadAsync();
+								CloudBlockBlob blob = new CloudBlockBlob(uri);
+								HashedImage image = new HashedImage(blob.Name);
+								image.mess = mess;
 
-                                                                        image.value = PdnaClientHash.GenerateHash(receiveStream);
+								Stream receiveStream = await blob.OpenReadAsync();
 
-                                                                        receiveStream.Close();
-                                                                        hashes.Add(image);
-                                                                }
-                                                                catch(Exception e){
-                                                                        log.Verbose("PDNAMonitor: Failed To read uri : " + uri + "Due to :"  + e.Message);
-                                                                }
+								image.value = PdnaClientHash.GenerateHash(receiveStream);
 
+								receiveStream.Close();
+								hashes.Add(image);
 							}
 							else
 							{
-								await mess.DeadLetterAsync();
+									await queue.DeleteMessageAsync(mess);
 							}
 						}
 
-						// make the batch call to pdna
-						taskList.Add(MakeRequest(hashes, log));
+						hashedBatches.Add(hashes);
 
-						await Task.Delay(100);
 					}
 
-					await Task.WhenAll(taskList);
+					var loop = Parallel.ForEach(hashedBatches, hashGroup => MakeRequest(hashGroup, logger, queue));
+
+					await Task.Delay(100 * hashedBatches.Count);
 				}
 
 			}
@@ -129,13 +138,27 @@ using System.Net;
 
 		}
 
+		public class OptionalLogger
+		{
+			public TraceWriter logs { get; set; }
+			public bool logging { get; set; }
+
+			public void Verbose(string input)
+			{
+				if (logging)
+				{
+					logs.Verbose(input);
+				}
+			}
+		}
+
 		public class HashedImage
 		{
 			public byte[] value;
 			public string description = "";
 			public string key;
 			public string type = "file";
-			public BrokeredMessage mess;
+			public CloudQueueMessage mess;
 
 			public HashedImage(string fileName)
 			{
@@ -149,7 +172,7 @@ using System.Net;
 			public string value = "";
 		}
 
-		public static async Task MakeRequest(List<HashedImage> imageList, TraceWriter log)
+		public static async Task MakeRequest(List<HashedImage> imageList, OptionalLogger log, CloudQueue queue)
 		{
 			try
 			{
@@ -160,8 +183,7 @@ using System.Net;
 
 				//client.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", System.Environment.GetEnvironmentVariable("subscriptionKey"));
 				client.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", System.Environment.GetEnvironmentVariable("subscriptionKey", EnvironmentVariableTarget.Process));
-
-				// Request parameters
+				
 				//var uri = System.Environment.GetEnvironmentVariable("subscriptionEndpoint");
 				var uri = System.Environment.GetEnvironmentVariable("subscriptionEndpoint", EnvironmentVariableTarget.Process);
 
@@ -186,7 +208,7 @@ using System.Net;
 
 					// process response
 					dynamic obj = JsonConvert.DeserializeObject(contents);
-					//log.Verbose("() () () Contents: " + contents);
+					log.Verbose("(.) (') (.) (') Contents: " + contents);    // process each of the results within the resposne for hits
 					foreach (var result in obj.MatchResults)
 					{
 						try
@@ -197,32 +219,53 @@ using System.Net;
 								{
 									var name = result.ContentId.ToString();
 									log.Verbose("PDNAMonitor: FOUND MATCH for img: " + name);
-									var mess = GetBrokeredMessage(imageList, name);
+									CloudQueueMessage mess = GetBrokeredMessage(imageList, name);
 									await MailNotification(response, name, log);
-									await mess.CompleteAsync();
+									try
+									{
+										await queue.DeleteMessageAsync(mess);
+									}
+									catch(Exception e)
+									{
+										if (!e.Message.Contains("404")) await MailNotificationError(e.Message, log); //sometimes the message will be deleted, but the call will be repeated if the response isn't timely enough, catch the error here
+									}
 								}
 								else if (result.IsMatch == "False")
 								{
 									var name = result.ContentId.ToString();
 									log.Verbose("PDNAMonitor: No match found for img: " + name);
-									var mess = GetBrokeredMessage(imageList, name);
-									await mess.CompleteAsync();
+									CloudQueueMessage mess = GetBrokeredMessage(imageList, name);
+									try
+									{
+										await queue.DeleteMessageAsync(mess);
+									}
+									catch (Exception e)
+									{
+										if (!e.Message.Contains("404")) await MailNotificationError(e.Message, log);
+									}
 								}
 							}
-							else
+							else // Some exception was included in the PDNA response or the response was empty
 							{
 								log.Verbose("PDNAMonitor: Proper response was not found: " + obj);
 
 								await MailNotificationError(await response.Content.ReadAsStringAsync(), log);
 								var name = result.ContentId.ToString();
-								var mess = GetBrokeredMessage(imageList, name);
-								await mess.AbandonAsync();
+								CloudQueueMessage mess = GetBrokeredMessage(imageList, name);
+								try
+								{
+									await queue.DeleteMessageAsync(mess);
+								}
+								catch (Exception e)
+								{
+									if (e.Message.Contains("404")) await MailNotificationError(e.Message, log);
+								}
 								throw new Exception(" .. the proper response was not found" + obj);
 							}
 						}
 						catch (Microsoft.CSharp.RuntimeBinder.RuntimeBinderException e)
 						{
-							log.Verbose("PDNAMonitor: Did nto receive expected response from PDNA (RuntimeBinder): " + GetAllMessage(e));
+							log.Verbose("PDNAMonitor: Did not receive expected response from PDNA (RuntimeBinder): " + GetAllMessage(e));
 						}
 					}
 
@@ -231,7 +274,7 @@ using System.Net;
 				{
 					if (!ex.Message.Contains("The lock supplied is invalid"))
 					{
-						string err = ("And Error was thrown trying to send Json to the PDNA subscription endpoint: " + GetAllMessage(ex));
+						string err = ("And Error was thrown trying to send request to the PDNA subscription endpoint: " + GetAllMessage(ex));
 						await MailNotificationError(err, log);
 						log.Verbose(err);
 					}
@@ -242,14 +285,14 @@ using System.Net;
 			{
 				if (!ex.Message.Contains("The lock supplied is invalid"))
 				{
-					string err = ("And Error was thrown trying to send Json to the PDNA subscription endpoint: " + GetAllMessage(ex));
+					string err = ("And Error was thrown trying to build http client or request to the PDNA subscription endpoint: " + GetAllMessage(ex));
 					await MailNotificationError(err, log);
 					log.Verbose(err);
 				}
 			}
 		}
 
-		private static BrokeredMessage GetBrokeredMessage(List<HashedImage> imageList, string name)
+		private static CloudQueueMessage GetBrokeredMessage(List<HashedImage> imageList, string name)
 		{
 			foreach (var image in imageList)
 			{
@@ -277,12 +320,12 @@ using System.Net;
 			return s;
 		}
 
-		private static async Task MailNotification(HttpResponseMessage message, string name, TraceWriter log)
+		private static async Task MailNotification(HttpResponseMessage message, string name, OptionalLogger log)
 		{
 			try
-			{
+			{   // POST the response message to the optional callback endpoint
 				string callbackEndPoint = System.Environment.GetEnvironmentVariable("callbackEndpoint", EnvironmentVariableTarget.Process);
-				if (callbackEndPoint != "N/A")
+				if (callbackEndPoint != "" && callbackEndPoint != "N/A")
 				{
 					var postClient = new HttpClient();
 					var result = await message.Content.ReadAsStringAsync();
@@ -297,7 +340,6 @@ using System.Net;
 						response = await postClient.PostAsync(callbackEndPoint, content);
 					}
 				}
-
 			}
 			catch (Exception ex)
 			{
@@ -305,9 +347,8 @@ using System.Net;
 			}
 
 			try
-			{
-				//string fromEmail = System.Environment.GetEnvironmentVariable("senderEmail");
-				//string toEmail = System.Environment.GetEnvironmentVariable("receiverEmail");
+			{   // EMAIL 'Hit' notification to the given email address via the given SMTP mailer account
+				// Build emailer parameteres / body
 				string fromEmail = System.Environment.GetEnvironmentVariable("senderEmail", EnvironmentVariableTarget.Process);
 				string toEmail = System.Environment.GetEnvironmentVariable("receiverEmail", EnvironmentVariableTarget.Process);
 				int smtpPort = 587;
@@ -316,7 +357,7 @@ using System.Net;
 				string smtpUser = System.Environment.GetEnvironmentVariable("smtpUserName", EnvironmentVariableTarget.Process); // your smtp user
 				string smtpPass = System.Environment.GetEnvironmentVariable("smtpPassword", EnvironmentVariableTarget.Process); // your smtp password
 				string subject = "Azure Image Content Warning from PhotoDNA";
-				string messageBody = "An image was uploaded to Azure which was flagged for innapropiate content by PhotoDNA...  the image file: " + name;
+				string messageBody = "An image was uploaded to Azure which was flagged for innapropiate content by PhotoDNA...  the image file: " + name + ". The File was uploaded to the storage account: " + System.Environment.GetEnvironmentVariable("targetStorageAccountName", EnvironmentVariableTarget.Process);
 
 				MailMessage mail = new MailMessage(fromEmail, toEmail);
 				SmtpClient client = new SmtpClient();
@@ -347,6 +388,7 @@ using System.Net;
 						ex = ex.InnerException;
 					}
 				}
+
 			}
 			catch (Exception ex)
 			{
@@ -356,12 +398,12 @@ using System.Net;
 
 		}
 
-		private static async Task MailNotificationError(string err, TraceWriter log)
+		private static async Task MailNotificationError(string err, OptionalLogger log)
 		{
 			try
-			{
+			{	// POST the response message to the optional callback endpoint
 				string callbackEndPoint = System.Environment.GetEnvironmentVariable("callbackEndpoint", EnvironmentVariableTarget.Process);
-				if (callbackEndPoint != "N/A")
+				if (callbackEndPoint != "" && callbackEndPoint != "N/A")
 				{
 					var postClient = new HttpClient();
 					var result = err;
@@ -384,10 +426,8 @@ using System.Net;
 
 			try
 			{
-				log.Verbose("!!  ---- ERROR  ---- FOUND");
-
-				//string fromEmail = System.Environment.GetEnvironmentVariable("senderEmail");
-				//string toEmail = System.Environment.GetEnvironmentVariable("receiverEmail");
+				// EMAIL 'Hit' notification to the given email address via the given SMTP mailer account
+				// Build emailer parameteres / body
 				string fromEmail = System.Environment.GetEnvironmentVariable("senderEmail", EnvironmentVariableTarget.Process);
 				string toEmail = System.Environment.GetEnvironmentVariable("receiverEmail", EnvironmentVariableTarget.Process);
 				int smtpPort = 587;
@@ -396,7 +436,7 @@ using System.Net;
 				string smtpUser = System.Environment.GetEnvironmentVariable("smtpUserName", EnvironmentVariableTarget.Process); // your smtp user
 				string smtpPass = System.Environment.GetEnvironmentVariable("smtpPassword", EnvironmentVariableTarget.Process); // your smtp password
 				string subject = "Error was thrown by PhotoDNA Monitoring";
-				string messageBody = "An error was thrown attempting to scan an object uploaded to your blob storage account. " + err;
+				string messageBody = "An error was thrown attempting to scan an object uploaded to your blob storage account. " + err + ". </br> The File was uploaded to the storage account: " + System.Environment.GetEnvironmentVariable("targetStorageAccountName", EnvironmentVariableTarget.Process); ;
 
 				MailMessage mail = new MailMessage(fromEmail, toEmail);
 				SmtpClient client = new SmtpClient();
@@ -415,13 +455,14 @@ using System.Net;
 				try
 				{
 					client.Send(mail);
-					log.Verbose("Email sent.");
+					log.Verbose("Error catch Email sent.");
 				}
 				catch (Exception ex)
 				{
 					log.Verbose("!!  ERROR ----  ---- The email was not sent.");
 					log.Verbose("!!  ERROR ----  ---- Error message: " + ex.Message);
 				}
+				
 			}
 			catch (Exception ex)
 			{

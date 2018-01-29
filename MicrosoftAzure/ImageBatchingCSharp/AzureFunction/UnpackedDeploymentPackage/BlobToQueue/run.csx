@@ -1,13 +1,21 @@
 #r "Microsoft.WindowsAzure.Storage"
 
-
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Blob;
+using Microsoft.WindowsAzure.Storage.Queue;
 using Microsoft.ServiceBus.Messaging;
 using System.Threading.Tasks; 
 
-public static async void Run(CloudBlockBlob myBlob, string name, string ext, TraceWriter log)
+public static async void Run(CloudBlockBlob myBlob, string name, string ext, TraceWriter logger)
 		{
+			var log = new OptionalLogger();
+			log.logs = logger;
+
+			bool logsetup = true;
+			if (System.Environment.GetEnvironmentVariable("logVerbose").ToLower() == "false") logsetup = false;
+
+			log.logging = logsetup;
+
 			log.Verbose("BlobToQueue: StartLogging: " + name);
 			int MaxtryAttempts = 1000;
 			int tryAttempts = 1;
@@ -16,8 +24,13 @@ public static async void Run(CloudBlockBlob myBlob, string name, string ext, Tra
 			{
 				try
 				{
-					var senderFactory = MessagingFactory.CreateFromConnectionString(System.Environment.GetEnvironmentVariable("NamespaceConnectionString"));
-					var sender = await senderFactory.CreateMessageSenderAsync("pdnamonitoringimagequeue");
+					//var senderFactory = MessagingFactory.CreateFromConnectionString(System.Environment.GetEnvironmentVariable("NamespaceConnectionString"));
+					//var sender = await senderFactory.CreateMessageSenderAsync("pdnamonitoringimagequeue");
+					var storageAccount = CloudStorageAccount.Parse(System.Environment.GetEnvironmentVariable("AzureWebJobsStorage"));
+					var client = storageAccount.CreateCloudQueueClient();
+					var queue = client.GetQueueReference("pdnamonitoringimagequeue");
+					queue.CreateIfNotExists();
+
 					switch (ext)
 					{
 						case "png":
@@ -36,12 +49,11 @@ public static async void Run(CloudBlockBlob myBlob, string name, string ext, Tra
 							log.Verbose("Not an image " + name);
 							return;
 					}
-
-					BrokeredMessage message = new BrokeredMessage();
-					message.Properties.Add("URI", myBlob.StorageUri.PrimaryUri.ToString());
+					
+					CloudQueueMessage message = new CloudQueueMessage(myBlob.StorageUri.PrimaryUri.ToString());
 					log.Verbose("BlobToQueue: Logged blob: " + myBlob.Name);
-					sender.Send(message);
-					sender.Close();
+					queue.AddMessage(message);
+					
 					return;
 				}
 				catch (Exception e)
@@ -59,7 +71,7 @@ public static async void Run(CloudBlockBlob myBlob, string name, string ext, Tra
 						while (e.InnerException != null)
 						{
 							e = e.InnerException;
-							log.Verbose("BlobToQueue :____" + e.Message + "___STACKTRACE:  " + e.StackTrace);
+							log.Verbose("____" + e.Message + "___STACKTRACE:  " + e.StackTrace);
 						}
 
 						done = true;
@@ -71,3 +83,16 @@ public static async void Run(CloudBlockBlob myBlob, string name, string ext, Tra
 			log.Verbose("BlobToQueue: ERROR 2.. Met max retry attempts blob to queue trigger :" + myBlob.Name);
 		}
 
+		public class OptionalLogger
+		{
+			public TraceWriter logs { get; set; }
+			public bool logging { get; set; }
+
+			public void Verbose(string input)
+			{
+				if (logging)
+				{
+					logs.Verbose(input);
+				}
+			}
+		}

@@ -8,12 +8,30 @@
 				"description": "the name of the storage account that will be monitored by the function app"
 			}
 		},
-		"functionAppName": {
+    "functionAppName": {
+      "type": "string",
+      "metadata": {
+        "description": "name your new function that will be created"
+      }
+    },
+		"PhotoDNASubscriptionEndpoint": {
 			"type": "string",
 			"metadata": {
-				"description": "name your new function that will be created"
+				"description": "Your unique PhotoDNA endpoint addess this can be found here: "
 			}
 		},
+    "PhotoDNASubscriptionKey": {
+      "type": "string",
+      "metadata": {
+        "description": "Your unique PhotoDNA subscription key, this can be found here: "
+      }
+    },
+    "logVerbose":{
+      "type": "bool",
+      "metadata": {
+        "description": "With this set to True, the function will Log each step of its execution in the Logs available in the Azure portal, with it set to false the function will not Log its execution except on Begin and End Execution and on Errors"
+      }
+    },
 		"smtpHostAddress": {
 			"type": "string",
 			"metadata": {
@@ -44,27 +62,9 @@
 				"description": "The email that will receive notificaitons when PhotoDNA happens to find a match on images uploaded to your storage"
 			}
 		},
-		"PhotoDNASubscriptionEndpoint": {
-			"type": "string",
-			"metadata": {
-				"description": "Your unique PhotoDNA endpoint addess this can be found here: "
-			}
-		},
-    "PhotoDNASubscriptionKey": {
-      "type": "string",
-      "metadata": {
-        "description": "Your unique PhotoDNA subscription key, this can be found here: "
-      }
-    },
-    "ServiceBusUniqueName": {
-			"type": "string",
-			"metadata": {
-				"description": "The Name of the Service Bus that holds the queue, this must be globaly unique"
-			}
-		},
 		"callbackEndpoint": {
 			"type": "string",
-      "defaultValue": "N/A",
+      "defaultValue": "",
 			"metadata": {
 				"description": "(optional) when PhotoDNA returns a match or errors occure, the results will be posted to this address"
 			}
@@ -82,161 +82,129 @@
     "smtpPassword": "[parameters('smtpPassword')]",
     "smtpUserName": "[parameters('smtpUserName')]",
     "imageQueueName": "pdnamonitoringimagequeue",
-    "serviceBusNamespace": "[parameters('ServiceBusUniqueName')]",
     "defaultSASKeyName": "RootManageSharedAccessKey",
-    "authRuleResourceId": "[resourceId('Microsoft.ServiceBus/namespaces/authorizationRules', parameters('ServiceBusUniqueName'), 'RootManageSharedAccessKey')]",
-	  "sbVersion": "2017-04-01"
-
+    "sbVersion": "2017-04-01",
+    "logVerbose": "[parameters('logVerbose')]"
 	},
-	"resources": [
+  "resources": [
     {
-      "type": "Microsoft.ServiceBus/namespaces",
-      "sku": {
-        "name": "Basic",
-        "tier": "Basic"
+      "apiVersion": "2014-04-01",
+      "name": "[parameters('functionAppName')]",
+      "type": "Microsoft.Insights/components",
+      "location": "East US",
+      "tags": {
+          "[concat('hidden-link:', resourceGroup().id, '/providers/Microsoft.Web/sites/', parameters('functionAppName'))]": "Resource",
+          "displayName": "AppInsightsComponent"
       },
-      "name": "[parameters('ServiceBusUniqueName')]",
-      "apiVersion": "2017-04-01",
-      "location": "Central US",
-      "tags": { },
-      "scale": null,
       "properties": {
-        "provisioningState": "Created",
-        "metricId": "[concat('2a154f79-8247-4a91-b95b-bd68f15b46d0:', toLower(parameters('ServiceBusUniqueName')), parameters('ServiceBusUniqueName'))]",
-        "createdAt": "2018-01-04T22:22:46.09Z",
-        "updatedAt": "2018-01-04T22:22:46.09Z",
-        "serviceBusEndpoint": "[concat('https://', parameters('ServiceBusUniqueName'),'.servicebus.windows.net:443/')]"
-      },
-      "dependsOn": [ ]
+          "applicationId": "[parameters('functionAppName')]"
+      }
     },
     {
-          "comments": "Generalized from resource: '/subscriptions/2a154f79-8247-4a91-b95b-bd68f15b46d0/resourcegroups/NEW/providers/Microsoft.ServiceBus/namespaces/PDNAMonitoringServiceBus/queues/imagequeue'.",
-          "type": "Microsoft.ServiceBus/namespaces/queues",
-          "name": "[concat(parameters('ServiceBusUniqueName'), '/', 'pdnamonitoringimagequeue')]",
-          "apiVersion": "2017-04-01",
-          "location": "Central US",
-          "scale": null,
-          "properties": {
-              "maxSizeInMegabytes": 1024,
-              "requiresDuplicateDetection": false,
-              "requiresSession": false,
-              "defaultMessageTimeToLive": "P1D",
-              "deadLetteringOnMessageExpiration": true,
-              "status": "Active",
-              "enablePartitioning": false,
-              "enableExpress": false,
-              "countDetails": {
-                  "activeMessageCount": 0,
-                  "deadLetterMessageCount": 0,
-                  "scheduledMessageCount": 0,
-                  "transferMessageCount": 0,
-                  "transferDeadLetterMessageCount": 0
-              }
-          },
-          "dependsOn": [
-              "[resourceId('Microsoft.ServiceBus/namespaces', parameters('ServiceBusUniqueName'))]"
+      "apiVersion": "2016-08-01",
+      "kind": "functionapp",
+      "name": "[parameters('functionAppName')]",
+      "location": "[resourceGroup().location]",
+      "properties": {
+        "config": {
+          "bindings": [
+            {
+              "authLevel": "anonymous",
+              "name": "req",
+              "type": "blobTrigger",
+              "direction": "in",
+              "path": "YourBlobNameHere/{name}.{ext}",
+              "connection": "AzureWebJobsStorage"
+            }
           ]
-      },			
+        },
+        "appSettings": [
+          {
+            "name": "AzureWebJobsDashboard",
+            "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')),'2015-05-01-preview').key1)]"
+          },
+          {
+            "name": "AzureWebJobsStorage",
+            "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')),'2015-05-01-preview').key1)]"
+          },
+          {
+            "name": "storageAccountName",
+            "value": "variables('storageAccountName')"
+
+          },
+          {
+            "name": "functionAppName",
+            "value": "variables('functionAppName')"
+          },
+          {
+            "name": "senderEmail",
+            "value": "variables('senderEmail')"
+          },
+          {
+            "name": "receiverEmail",
+            "value": "variables('receiverEmail')"
+          },
+          {
+            "name": "subscriptionEndpoint",
+            "value": "variables('subscriptionEndpoint')"
+          },
+          {
+            "name": "subscriptionKey",
+            "value": "variables('subscriptionKey')"
+          },
+          {
+            "name": "callbackEndpoint",
+            "value": "variables('callbackEndpoint')"
+          },
+          {
+            "name": "smtpHostAddress",
+            "value": "variables('smtpHostAddress')"
+          },
+          {
+            "name": "smtpPassword",
+            "value": "variables('smtpPassword')"
+          },
+          {
+            "name": "smtpUserName",
+            "value": "variables('smtpUserName')"
+          },
+          {
+            "name": "APPINSIGHTS_INSTRUMENTATIONKEY",
+            "value": "[reference(concat('microsoft.insights/components/', parameters('functionAppName'))).InstrumentationKey]"
+          }
+        ]
+      },
+      "resources": [
         {
-						"apiVersion": "2016-08-01",
-						"kind": "functionapp",
-						"name": "[parameters('functionAppName')]",
-						"location": "[resourceGroup().location]",
-						"properties": {
-							"config": {
-								"bindings": [
-									{
-										"authLevel": "anonymous",
-										"name": "req",
-										"type": "blobTrigger",
-										"direction": "in",
-										"path": "YourBlobNameHere/{name}.{ext}",
-										"connection": "AzureWebJobsStorage"
-									}
-								]
-							},
-							"appSettings": [
-								{
-									"name": "AzureWebJobsDashboard",
-									"value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')),'2015-05-01-preview').key1)]"
-								},
-                {
-                  "name": "AzureWebJobsStorage",
-                  "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')),'2015-05-01-preview').key1)]"
-                },
-                {
-                  "name": "storageAccountName",
-                  "value": "variables('storageAccountName')"
+          "name": "appsettings",
+          "type": "config",
+          "apiVersion": "2016-08-01",
+          "dependsOn": [
+            "[resourceId('Microsoft.Web/sites', parameters('functionAppName'))]"
+          ],
+          "properties": {
+            "AzureWebJobsStorage": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')),'2015-05-01-preview').key1)]",
+            "AzureWebJobsDashboard": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')),'2015-05-01-preview').key1)]",
+            "functionAppName": "[parameters('functionAppName')]",
+            "storageAccountName": "[parameters('targetStorageAccountName')]",
+            "senderEmail": "[parameters('notificationSenderEmail')]",
+            "receiverEmail": "[parameters('notificationReceiverEmail')]",
+            "subscriptionEndpoint": "[parameters('PhotoDNASubscriptionEndpoint')]",
+            "subscriptionKey": "[parameters('PhotoDNASubscriptionKey')]",
+            "callbackEndpoint": "[parameters('callbackEndpoint')]",
+            "smtpHostAddress": "[parameters('smtpHostAddress')]",
+            "smtpPassword": "[parameters('smtpPassword')]",
+            "smtpUserName": "[parameters('smtpUserName')]",
+            "imageQueueName": "pdnamonitoringimagequeue",
+            "logVerbose": "[parameters('logVerbose')]",
+            "APPINSIGHTS_INSTRUMENTATIONKEY": "[reference(concat('microsoft.insights/components/', parameters('functionAppName'))).InstrumentationKey]"
+          }
+        }
+      ],
+      "type": "Microsoft.Web/sites"
+    }
 
-                },
-								{
-									"name": "functionAppName",
-									"value": "variables('functionAppName')"
-								},
-								{
-									"name": "senderEmail",
-									"value": "variables('senderEmail')"
-								},
-								{
-									"name": "receiverEmail",
-									"value": "variables('receiverEmail')"
-								},
-								{
-									"name": "subscriptionEndpoint",
-									"value": "variables('subscriptionEndpoint')"
-								},
-								{
-									"name": "subscriptionKey",
-									"value": "variables('subscriptionKey')"
-								},
-								{
-									"name": "callbackEndpoint",
-									"value": "variables('callbackEndpoint')"
-								},
-								{
-									"name": "smtpHostAddress",
-									"value": "variables('smtpHostAddress')"
-								},
-								{
-									"name": "smtpPassword",
-									"value": "variables('smtpPassword')"
-								},
-								{
-									"name": "smtpUserName",
-									"value": "variables('smtpUserName')"
-								}
-							]
-						},
-						"resources": [
-							{
-								"name": "appsettings",
-								"type": "config",
-								"apiVersion": "2016-08-01",
-								"dependsOn": [
-									"[resourceId('Microsoft.Web/sites', parameters('functionAppName'))]"
-								],
-								"properties": {
-									"AzureWebJobsStorage": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')),'2015-05-01-preview').key1)]",
-									"AzureWebJobsDashboard": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')),'2015-05-01-preview').key1)]",
-                  "functionAppName": "[parameters('functionAppName')]",
-                  "storageAccountName": "[parameters('targetStorageAccountName')]",
-                  "senderEmail": "[parameters('notificationSenderEmail')]",
-                  "receiverEmail": "[parameters('notificationReceiverEmail')]",
-                  "subscriptionEndpoint": "[parameters('PhotoDNASubscriptionEndpoint')]",
-                  "subscriptionKey": "[parameters('PhotoDNASubscriptionKey')]",
-                  "callbackEndpoint": "[parameters('callbackEndpoint')]",
-                  "smtpHostAddress": "[parameters('smtpHostAddress')]",
-                  "smtpPassword": "[parameters('smtpPassword')]",
-                  "smtpUserName": "[parameters('smtpUserName')]",
-                  "NamespaceConnectionString": "[listkeys(variables('authRuleResourceId'), variables('sbVersion')).primaryConnectionString]",
-                  "imageQueueName": "pdnamonitoringimagequeue"
-								}
-							}
-						],
-						"type": "Microsoft.Web/sites"
-					}
-
-	],
+  ],
 		"outputs":
 		{}
 }

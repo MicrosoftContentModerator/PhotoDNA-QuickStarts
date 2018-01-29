@@ -1,0 +1,291 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Parameters": {
+        "PhotoDNAEndpoint": {
+            "Type": "String",
+            "Description": "The endpoint URL supplied by PhotoDNA for your subscription, find your endpoint here: https://testpdnaui.azurewebsites.net/"
+        },
+        "PhotoDNAKey": {
+            "Type": "String",
+            "Description": "Your personal PDNA key, you can find your personal Key here: https://testpdnaui.azurewebsites.net/"
+        },
+        "NotificationReceiverEmailAddress": {
+            "Type": "String",
+            "Description": "The Email address that will be sent notifications when PDNA finds an image match (use a comma seperated list to designate multiple email recepients)"
+        },
+        "SenderEmailAddress": {
+            "Type": "String",
+            "Description": "The Email address that will be used to send notifications when PDNA finds an image match. This needs to be an email that has been verified by Amazon https://us-west-2.console.aws.amazon.com/ses/#verified-senders-email:"
+        },
+        "CallbackEndpoint": {
+            "Type": "String",
+            "Description": "(optional) If the processing of an item fails, the error and message body responsible will be posted to this URL if assigned"
+        }
+    },
+    "Metadata": {
+        "AWS::CloudFormation::Designer": {
+            "68a19d99-8a59-449e-a00b-1be46aa9c69a": {
+                "size": {
+                    "width": 60,
+                    "height": 60
+                },
+                "position": {
+                    "x": 120,
+                    "y": 60
+                },
+                "z": 1,
+                "embeds": [],
+                "dependson": [
+                    "879ce696-5115-4ee5-a613-3ab4426e34af",
+                    "f98f060d-b2b9-473f-8870-0bbec40f00ce"
+                ]
+            },
+            "41d4ad20-adfb-4b4f-9cbb-1002f3286a41": {
+                "size": {
+                    "width": 60,
+                    "height": 60
+                },
+                "position": {
+                    "x": 390,
+                    "y": 120
+                },
+                "z": 1,
+                "embeds": []
+            },
+            "bd642954-54a0-4563-8bb7-775837564614": {
+                "size": {
+                    "width": 60,
+                    "height": 60
+                },
+                "position": {
+                    "x": 10,
+                    "y": 40
+                },
+                "z": 1,
+                "embeds": [],
+                "isassociatedwith": [
+                    "68a19d99-8a59-449e-a00b-1be46aa9c69a"
+                ],
+                "dependson": [
+                    "177d1776-f33e-46da-9eae-8e8da3670c55"
+                ]
+            },
+            "888607ae-7508-4af5-9fc2-ff15cc91c11d": {
+                "size": {
+                    "width": 60,
+                    "height": 60
+                },
+                "position": {
+                    "x": 80,
+                    "y": 170
+                },
+                "z": 1,
+                "embeds": [],
+                "dependson": [
+                    "879ce696-5115-4ee5-a613-3ab4426e34af"
+                ]
+            },
+            "879ce696-5115-4ee5-a613-3ab4426e34af": {
+                "size": {
+                    "width": 60,
+                    "height": 60
+                },
+                "position": {
+                    "x": 270,
+                    "y": 100
+                },
+                "z": 0,
+                "embeds": []
+            },
+            "f98f060d-b2b9-473f-8870-0bbec40f00ce": {
+                "size": {
+                    "width": 60,
+                    "height": 60
+                },
+                "position": {
+                    "x": 180,
+                    "y": 0
+                },
+                "z": 0,
+                "embeds": []
+            },
+            "34a74904-c335-40cf-ace4-cd123fce5e14": {
+                "source": {
+                    "id": "68a19d99-8a59-449e-a00b-1be46aa9c69a"
+                },
+                "target": {
+                    "id": "f98f060d-b2b9-473f-8870-0bbec40f00ce"
+                },
+                "z": 2
+            }
+        }
+    },
+    "Resources": {
+        "BlobTrigger": {
+            "Type": "AWS::Lambda::Function",
+            "Properties": {
+                "Environment": {
+                    "Variables": {
+                        "subscriptionEndpoint": {
+                            "Ref": "PhotoDNAEndpoint"
+                        },
+                        "callbackEndpoint": {
+                            "Ref": "CallbackEndpoint"
+                        },
+                        "subscriptionKey": {
+                            "Ref": "PhotoDNAKey"
+                        },
+                        "emailAddress": {
+                            "Ref": "NotificationReceiverEmailAddress"
+                        },
+                        "senderAddress": {
+                            "Ref": "SenderEmailAddress"
+                        }
+                    }
+                },
+                "Code": {
+                    "S3Bucket": "photo.dna.bucket.test",
+                    "S3Key": "testjarupload.jar"
+                },
+                "Role": {
+                    "Fn::GetAtt": [
+                        "TestRole",
+                        "Arn"
+                    ]
+                },
+                "Timeout": 300,
+                "Handler": "com.amazonaws.lambda.demo.LambdaFunctionHandler",
+                "Runtime": "java8"
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "68a19d99-8a59-449e-a00b-1be46aa9c69a"
+                }
+            },
+            "DependsOn": [
+                "SQSQ2JI1D",
+                "S3BVNXU"
+            ]
+        },
+        "TestRole": {
+            "Type": "AWS::IAM::Role",
+            "Properties": {
+                "AssumeRolePolicyDocument": {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Effect": "Allow",
+                            "Principal": {
+                                "Service": [
+                                    "lambda.amazonaws.com"
+                                ]
+                            },
+                            "Action": [
+                                "sts:AssumeRole"
+                            ]
+                        }
+                    ]
+                },
+                "Path": "/",
+                "Policies": [
+                    {
+                        "PolicyName": "root",
+                        "PolicyDocument": {
+                            "Version": "2012-10-17",
+                            "Statement": [
+                                {
+                                    "Effect": "Allow",
+                                    "Action": "*",
+                                    "Resource": "*"
+                                }
+                            ]
+                        }
+                    }
+                ]
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "41d4ad20-adfb-4b4f-9cbb-1002f3286a41"
+                }
+            }
+        },
+        "InvokeLambdaPermission": {
+            "Type": "AWS::Lambda::Permission",
+            "Properties": {
+                "FunctionName": {
+                    "Ref": "BlobTrigger"
+                },
+                "Action": "lambda:InvokeFunction",
+                "Principal": "events.amazonaws.com"
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "bd642954-54a0-4563-8bb7-775837564614"
+                }
+            }
+        },
+        "Timer": {
+            "Type": "AWS::Lambda::Function",
+            "Properties": {
+                "Environment": {
+                    "Variables": {
+                        "subscriptionEndpoint": {
+                            "Ref": "PhotoDNAEndpoint"
+                        },
+                        "callbackEndpoint": {
+                            "Ref": "CallbackEndpoint"
+                        },
+                        "subscriptionKey": {
+                            "Ref": "PhotoDNAKey"
+                        },
+                        "emailAddress": {
+                            "Ref": "NotificationReceiverEmailAddress"
+                        },
+                        "senderAddress": {
+                            "Ref": "SenderEmailAddress"
+                        }
+                    }
+                },
+                "Code": {
+                    "S3Bucket": "photo.dna.bucket.test",
+                    "S3Key": "testjarupload2.jar"
+                },
+                "Role": {
+                    "Fn::GetAtt": [
+                        "TestRole",
+                        "Arn"
+                    ]
+                },
+                "Timeout": 300,
+                "Handler": "com.amazonaws.lambda.demo.LambdaFunctionHandler",
+                "Runtime": "java8"
+            },
+            "DependsOn": [
+                "SQSQ2JI1D"
+            ],
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "888607ae-7508-4af5-9fc2-ff15cc91c11d"
+                }
+            }
+        },
+        "SQSQ2JI1D": {
+            "Type": "AWS::SQS::Queue",
+            "Properties": {},
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "879ce696-5115-4ee5-a613-3ab4426e34af"
+                }
+            }
+        },
+        "S3BVNXU": {
+            "Type": "AWS::S3::Bucket",
+            "Properties": {},
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "f98f060d-b2b9-473f-8870-0bbec40f00ce"
+                }
+            }
+        }
+    }
+}
