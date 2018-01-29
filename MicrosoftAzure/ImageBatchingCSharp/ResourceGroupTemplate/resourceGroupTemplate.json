@@ -86,107 +86,125 @@
     "sbVersion": "2017-04-01",
     "logVerbose": "[parameters('logVerbose')]"
 	},
-	"resources": [
+  "resources": [
+    {
+      "apiVersion": "2014-04-01",
+      "name": "[parameters('functionAppName')]",
+      "type": "Microsoft.Insights/components",
+      "location": "East US",
+      "tags": {
+          "[concat('hidden-link:', resourceGroup().id, '/providers/Microsoft.Web/sites/', parameters('functionAppName'))]": "Resource",
+          "displayName": "AppInsightsComponent"
+      },
+      "properties": {
+          "applicationId": "[parameters('functionAppName')]"
+      }
+    },
+    {
+      "apiVersion": "2016-08-01",
+      "kind": "functionapp",
+      "name": "[parameters('functionAppName')]",
+      "location": "[resourceGroup().location]",
+      "properties": {
+        "config": {
+          "bindings": [
+            {
+              "authLevel": "anonymous",
+              "name": "req",
+              "type": "blobTrigger",
+              "direction": "in",
+              "path": "YourBlobNameHere/{name}.{ext}",
+              "connection": "AzureWebJobsStorage"
+            }
+          ]
+        },
+        "appSettings": [
+          {
+            "name": "AzureWebJobsDashboard",
+            "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')),'2015-05-01-preview').key1)]"
+          },
+          {
+            "name": "AzureWebJobsStorage",
+            "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')),'2015-05-01-preview').key1)]"
+          },
+          {
+            "name": "storageAccountName",
+            "value": "variables('storageAccountName')"
+
+          },
+          {
+            "name": "functionAppName",
+            "value": "variables('functionAppName')"
+          },
+          {
+            "name": "senderEmail",
+            "value": "variables('senderEmail')"
+          },
+          {
+            "name": "receiverEmail",
+            "value": "variables('receiverEmail')"
+          },
+          {
+            "name": "subscriptionEndpoint",
+            "value": "variables('subscriptionEndpoint')"
+          },
+          {
+            "name": "subscriptionKey",
+            "value": "variables('subscriptionKey')"
+          },
+          {
+            "name": "callbackEndpoint",
+            "value": "variables('callbackEndpoint')"
+          },
+          {
+            "name": "smtpHostAddress",
+            "value": "variables('smtpHostAddress')"
+          },
+          {
+            "name": "smtpPassword",
+            "value": "variables('smtpPassword')"
+          },
+          {
+            "name": "smtpUserName",
+            "value": "variables('smtpUserName')"
+          },
+          {
+            "name": "APPINSIGHTS_INSTRUMENTATIONKEY",
+            "value": "[reference(concat('microsoft.insights/components/', parameters('functionAppName'))).InstrumentationKey]"
+          }
+        ]
+      },
+      "resources": [
         {
-						"apiVersion": "2016-08-01",
-						"kind": "functionapp",
-						"name": "[parameters('functionAppName')]",
-						"location": "[resourceGroup().location]",
-						"properties": {
-							"config": {
-								"bindings": [
-									{
-										"authLevel": "anonymous",
-										"name": "req",
-										"type": "blobTrigger",
-										"direction": "in",
-										"path": "YourBlobNameHere/{name}.{ext}",
-										"connection": "AzureWebJobsStorage"
-									}
-								]
-							},
-							"appSettings": [
-								{
-									"name": "AzureWebJobsDashboard",
-									"value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')),'2015-05-01-preview').key1)]"
-								},
-                {
-                  "name": "AzureWebJobsStorage",
-                  "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')),'2015-05-01-preview').key1)]"
-                },
-                {
-                  "name": "storageAccountName",
-                  "value": "variables('storageAccountName')"
+          "name": "appsettings",
+          "type": "config",
+          "apiVersion": "2016-08-01",
+          "dependsOn": [
+            "[resourceId('Microsoft.Web/sites', parameters('functionAppName'))]"
+          ],
+          "properties": {
+            "AzureWebJobsStorage": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')),'2015-05-01-preview').key1)]",
+            "AzureWebJobsDashboard": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')),'2015-05-01-preview').key1)]",
+            "functionAppName": "[parameters('functionAppName')]",
+            "storageAccountName": "[parameters('targetStorageAccountName')]",
+            "senderEmail": "[parameters('notificationSenderEmail')]",
+            "receiverEmail": "[parameters('notificationReceiverEmail')]",
+            "subscriptionEndpoint": "[parameters('PhotoDNASubscriptionEndpoint')]",
+            "subscriptionKey": "[parameters('PhotoDNASubscriptionKey')]",
+            "callbackEndpoint": "[parameters('callbackEndpoint')]",
+            "smtpHostAddress": "[parameters('smtpHostAddress')]",
+            "smtpPassword": "[parameters('smtpPassword')]",
+            "smtpUserName": "[parameters('smtpUserName')]",
+            "imageQueueName": "pdnamonitoringimagequeue",
+            "logVerbose": "[parameters('logVerbose')]",
+            "APPINSIGHTS_INSTRUMENTATIONKEY": "[reference(concat('microsoft.insights/components/', parameters('functionAppName'))).InstrumentationKey]"
+          }
+        }
+      ],
+      "type": "Microsoft.Web/sites"
+    }
 
-                },
-								{
-									"name": "functionAppName",
-									"value": "variables('functionAppName')"
-								},
-								{
-									"name": "senderEmail",
-									"value": "variables('senderEmail')"
-								},
-								{
-									"name": "receiverEmail",
-									"value": "variables('receiverEmail')"
-								},
-								{
-									"name": "subscriptionEndpoint",
-									"value": "variables('subscriptionEndpoint')"
-								},
-								{
-									"name": "subscriptionKey",
-									"value": "variables('subscriptionKey')"
-								},
-								{
-									"name": "callbackEndpoint",
-									"value": "variables('callbackEndpoint')"
-								},
-								{
-									"name": "smtpHostAddress",
-									"value": "variables('smtpHostAddress')"
-								},
-								{
-									"name": "smtpPassword",
-									"value": "variables('smtpPassword')"
-								},
-								{
-									"name": "smtpUserName",
-									"value": "variables('smtpUserName')"
-								}
-							]
-						},
-						"resources": [
-							{
-								"name": "appsettings",
-								"type": "config",
-								"apiVersion": "2016-08-01",
-								"dependsOn": [
-									"[resourceId('Microsoft.Web/sites', parameters('functionAppName'))]"
-								],
-								"properties": {
-									"AzureWebJobsStorage": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')),'2015-05-01-preview').key1)]",
-									"AzureWebJobsDashboard": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')),'2015-05-01-preview').key1)]",
-                  "functionAppName": "[parameters('functionAppName')]",
-                  "storageAccountName": "[parameters('targetStorageAccountName')]",
-                  "senderEmail": "[parameters('notificationSenderEmail')]",
-                  "receiverEmail": "[parameters('notificationReceiverEmail')]",
-                  "subscriptionEndpoint": "[parameters('PhotoDNASubscriptionEndpoint')]",
-                  "subscriptionKey": "[parameters('PhotoDNASubscriptionKey')]",
-                  "callbackEndpoint": "[parameters('callbackEndpoint')]",
-                  "smtpHostAddress": "[parameters('smtpHostAddress')]",
-                  "smtpPassword": "[parameters('smtpPassword')]",
-                  "smtpUserName": "[parameters('smtpUserName')]",
-                  "imageQueueName": "pdnamonitoringimagequeue",
-                  "logVerbose": "[parameters('logVerbose')]"
-								}
-							}
-						],
-						"type": "Microsoft.Web/sites"
-					}
-
-	],
+  ],
 		"outputs":
 		{}
 }
