@@ -1,0 +1,1 @@
+THIS version is incomplete, batching was never fully implemented in Amazon Web Services. Use Java Batching for AWS batching services

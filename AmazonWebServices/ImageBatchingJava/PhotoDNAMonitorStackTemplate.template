@@ -1,0 +1,316 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Parameters": {
+        "S3Bucket": {
+            "Type": "String",
+            "Description": "The name of the bucket that you uploaded the lambda code to. This should be the frist step"
+        },
+        "S3Key": {
+            "Type": "String",
+            "Description": "The key of the s3 object that you uploaded the jar of the code to. This should be the first step before using this template"
+        },
+        "PhotoDNAEndpoint": {
+            "Type": "String",
+            "Description": "The endpoint URL supplied by PhotoDNA for your subscription, find your endpoint here: https://testpdnaui.azurewebsites.net/"
+        },
+        "PhotoDNAKey": {
+            "Type": "String",
+            "Description": "Your personal PDNA key, you can find your personal Key here: https://testpdnaui.azurewebsites.net/"
+        },
+        "NotificationReceiverEmailAddress": {
+            "Type": "String",
+            "Description": "The Email address that will be sent notifications when PDNA finds an image match (use a comma seperated list to designate multiple email recepients)"
+        },
+        "SenderEmailAddress": {
+            "Type": "String",
+            "Description": "The Email address that will be used to send notifications when PDNA finds an image match. This needs to be an email that has been verified by Amazon https://us-west-2.console.aws.amazon.com/ses/#verified-senders-email:"
+        },
+        "CallbackEndpoint": {
+            "Type": "String",
+            "Description": "(optional) If the processing of an item fails, the error and message body responsible will be posted to this URL if assigned"
+        }
+    },
+    "Metadata": {
+        "AWS::CloudFormation::Designer": {
+            "68a19d99-8a59-449e-a00b-1be46aa9c69a": {
+                "size": {
+                    "width": 60,
+                    "height": 60
+                },
+                "position": {
+                    "x": 270,
+                    "y": 180
+                },
+                "z": 1,
+                "embeds": []
+            },
+            "41d4ad20-adfb-4b4f-9cbb-1002f3286a41": {
+                "size": {
+                    "width": 60,
+                    "height": 60
+                },
+                "position": {
+                    "x": 370,
+                    "y": 210
+                },
+                "z": 1,
+                "embeds": []
+            },
+            "3119ab73-0c08-486d-b780-a5a66fd4577f": {
+                "size": {
+                    "width": 60,
+                    "height": 60
+                },
+                "position": {
+                    "x": 180,
+                    "y": 180
+                },
+                "z": 1,
+                "embeds": []
+            },
+            "b66d1023-fb5d-4fa0-b78a-c32e598cbb5e": {
+                "size": {
+                    "width": 60,
+                    "height": 60
+                },
+                "position": {
+                    "x": 270,
+                    "y": 70
+                },
+                "z": 1,
+                "embeds": []
+            },
+            "bd642954-54a0-4563-8bb7-775837564614": {
+                "size": {
+                    "width": 60,
+                    "height": 60
+                },
+                "position": {
+                    "x": 450,
+                    "y": 60
+                },
+                "z": 1,
+                "embeds": [],
+                "isassociatedwith": [
+                    "68a19d99-8a59-449e-a00b-1be46aa9c69a"
+                ]
+            },
+            "0339ad65-4054-4565-b1a3-39f34c10c1cb": {
+                "size": {
+                    "width": 60,
+                    "height": 60
+                },
+                "position": {
+                    "x": 80,
+                    "y": 110
+                },
+                "z": 1,
+                "embeds": [],
+                "isassociatedwith": [
+                    "3119ab73-0c08-486d-b780-a5a66fd4577f"
+                ]
+            }
+        }
+    },
+    "Resources": {
+        "PDNAMonitoring": {
+            "Type": "AWS::Lambda::Function",
+            "Properties": {
+                "Environment": {
+                    "Variables": {
+                        "subscriptionEndpoint": {
+                            "Ref": "PhotoDNAEndpoint"
+                        },
+                        "callbackEndpoint": {
+                            "Ref": "CallbackEndpoint"
+                        },
+                        "subscriptionKey": {
+                            "Ref": "PhotoDNAKey"
+                        },
+                        "emailAddress": {
+                            "Ref": "NotificationReceiverEmailAddress"
+                        },
+                        "senderAddress": {
+                            "Ref": "SenderEmailAddress"
+                        },
+                        "sourceQueueURL": {
+                            "Ref": "ImageQueue"
+                        }
+                    }
+                },
+                "Code": {
+                    "S3Bucket": {
+                        "Ref": "S3Bucket"
+                    },
+                    "S3Key": {
+                        "Ref": "S3Key"
+                    }
+                },
+                "Role": {
+                    "Fn::GetAtt": [
+                        "TestRole",
+                        "Arn"
+                    ]
+                },
+                "Timeout": 300,
+                "Handler": "com.amazonaws.lambda.demo.LambdaFunctionHandler",
+                "MemorySize" : 512,
+                "Runtime": "java8"
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "68a19d99-8a59-449e-a00b-1be46aa9c69a"
+                }
+            },
+            "DependsOn": [
+                "TestRole"
+            ]
+        },
+        "TestRole": {
+            "Type": "AWS::IAM::Role",
+            "Properties": {
+                "AssumeRolePolicyDocument": {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Effect": "Allow",
+                            "Principal": {
+                                "Service": [
+                                    "lambda.amazonaws.com"
+                                ]
+                            },
+                            "Action": [
+                                "sts:AssumeRole"
+                            ]
+                        }
+                    ]
+                },
+                "Path": "/",
+                "Policies": [
+                    {
+                        "PolicyName": "root",
+                        "PolicyDocument": {
+                            "Version": "2012-10-17",
+                            "Statement": [
+                                {
+                                    "Effect": "Allow",
+                                    "Action": "*",
+                                    "Resource": "*"
+                                }
+                            ]
+                        }
+                    }
+                ]
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "41d4ad20-adfb-4b4f-9cbb-1002f3286a41"
+                }
+            }
+        },
+        "ImageQueue": {
+            "Type": "AWS::SQS::Queue",
+            "Properties": {},
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "3119ab73-0c08-486d-b780-a5a66fd4577f"
+                }
+            }
+        },
+        "ImageQueuePolicy": {
+            "Type": "AWS::SQS::QueuePolicy",
+            "Properties": {
+                "PolicyDocument": {
+                    "Version": "2012-10-17",
+                    "Id": "QueuePolicy",
+                    "Statement": [
+                        {
+                            "Sid": "1",
+                            "Effect": "Allow",
+                            "Principal": {
+                                "AWS": [
+                                    "*"
+                                ]
+                            },
+                            "Action": [
+                                "sqs:SendMessage",
+                                "sqs:ReceiveMessage",
+                                "sqs:DeleteMessage",
+                                "sqs:CreateQueue"
+                            ],
+                            "Resource": "*"
+                        }
+                    ]
+                },
+                "Queues": [
+                    {
+                        "Ref": "ImageQueue"
+                    }
+                ]
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "0339ad65-4054-4565-b1a3-39f34c10c1cb"
+                }
+            }
+        },
+        "ScanScheduler": {
+            "Type": "AWS::Events::Rule",
+            "Properties": {
+                "Name": "ScanScheduler",
+                "ScheduleExpression": "rate(5 minutes)",
+                "Targets": [
+                    {
+                        "Arn": {
+                            "Fn::GetAtt": [
+                                "PDNAMonitoring",
+                                "Arn"
+                            ]
+                        },
+                        "Id": "PDNAMonitoring"
+                    }
+                ]
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "b66d1023-fb5d-4fa0-b78a-c32e598cbb5e"
+                }
+            },
+            "DependsOn": [
+                "PDNAMonitoring"
+            ]
+        },
+        "InvokeLambdaPermission": {
+            "Type": "AWS::Lambda::Permission",
+            "Properties": {
+                "FunctionName": {
+                    "Fn::GetAtt": [
+                        "PDNAMonitoring",
+                        "Arn"
+                    ]
+                },
+                "Action": "lambda:*",
+                "Principal": "events.amazonaws.com",
+                "SourceArn": {
+                    "Fn::GetAtt": [
+                        "ScanScheduler",
+                        "Arn"
+                    ]
+                }
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "bd642954-54a0-4563-8bb7-775837564614"
+                }
+            }
+        }
+    },
+    "Outputs": {
+        "QueueURL": {
+            "Description": "URL of the image queue",
+            "Value": {
+                "Ref": "ImageQueue"
+            }
+        }
+    }
+}
