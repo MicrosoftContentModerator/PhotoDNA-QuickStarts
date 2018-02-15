@@ -1,0 +1,1 @@
+This version was less efficent then its batching counterpart, We reccomend using C# batching version instead of this version for Azure
