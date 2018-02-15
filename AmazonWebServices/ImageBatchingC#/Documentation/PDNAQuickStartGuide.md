@@ -39,3 +39,8 @@ The options page contains a number of parameters that can change how the stack i
 
 **8)**	Select **Save**
 Your bucket is now ready to be monitored by PDNA, repeat steps 6-8 for each bucket you want monitored by PDNAs services. 
+
+
+**Troubleshooting and Verify the App is functioning:** if you wish to make sure the app is working properly, you can upload some test images to storage bucket and monitor the apps progress scanning each. Visit **this page** to download a folder of test images, a few of which will generate hits from PhotoDNA's scans. While you upload images to your blob for testing or otherwise, you can view the servers log and other data from Amazons CloudWatch logging resource. The images that produce hits from PhotoDNA will also send emails to the address you specified during setup. 
+If your template fails to install, make sure you have all names consistent in the parameters when naming your Stack and entering the address for both PhotoDNA and the optional Callback Endpoint. The name of the stack must be unique to your account, duplicate name can sometimes cause the Stack to fail to install properly.
+If your stack installs but you are not receiving email when you believe you should be, double check that your email address (both Sender and Receive addresses) are registered in your Amazon account. You can visit [this page](https://us-west-2.console.aws.amazon.com/ses/home?region=us-west-2#verified-senders-email ) to double check
