@@ -3,11 +3,12 @@
     "Parameters": {
         "PhotoDNAEndpoint": {
             "Type": "String",
-            "Description": "The endpoint URL supplied by PhotoDNA for your subscription, find your endpoint here: https://testpdnaui.azurewebsites.net/"
+            "Description": "The endpoint URL supplied by PhotoDNA for your subscription, find your endpoint here: https://myphotodna.microsoftmoderator.com/",
+            "Default" : "https://api.microsoftmoderator.com/photodna/v1.0/Match"
         },
         "PhotoDNAKey": {
             "Type": "String",
-            "Description": "Your personal PDNA key, you can find your personal Key here: https://testpdnaui.azurewebsites.net/"
+            "Description": "Your personal PDNA key, you can find your personal Key here: https://myphotodna.microsoftmoderator.com/"
         },
         "NotificationReceiverEmailAddress": {
             "Type": "String",

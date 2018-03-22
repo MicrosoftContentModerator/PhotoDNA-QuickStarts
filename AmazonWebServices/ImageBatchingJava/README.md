@@ -4,8 +4,8 @@
 This document will guide you through the steps to set up Photo DNA Monitoring for your own existing S3 buckets.
 Before you start, visit [the Photo DNA home page](https://myphotodna.microsoftmoderator.com/) and create a subscription.
 
-**1)**	Click ![https://console.aws.amazon.com/cloudformation/home?region=us-west-2#/stacks/new?stackName=PhotoDNAMonitorStackTempalte&templateURL=https://s3-us-west-2.amazonaws.com/allyislambdafunctionsbucket/PhotoDNAMonitorStackTemplate.template](https://dmhnzl5mp9mj6.cloudfront.net/application-management_awsblog/images/cloudformation-launch-stack.png) to be navigated to your AWS accounts CloudFormation page using our CloudFormation Template. You will be navigate automatically to this page once you have logged in:
-![](https://s3-us-west-2.amazonaws.com/allyislambdafunctionsbucket/AWSLandingPage.PNG)
+**1)**Click ![https://console.aws.amazon.com/cloudformation/home?region=us-west-2#/stacks/new?stackName=PhotoDNAEdgeMonitorStackTempalte&templateURL=https://s3-us-west-2.amazonaws.com/pdnaquickstarttemplates/PhotoDNAMonitorStackTemplate.template](https://dmhnzl5mp9mj6.cloudfront.net/application-management_awsblog/images/cloudformation-launch-stack.png) to be navigated to your AWS accounts CloudFormation page using our CloudFormation Template. You will be navigate automatically to this page once you have logged in:
+(https://s3-us-west-2.amazonaws.com/allyislambdafunctionsbucket/AWSLandingPage.PNG)
 Nothing needs to be done on this page, the URL for the CloudFormation Stack will be automatically populated into the appropriate field. Click **Next** to continue
 
 **2)**	On the first fill out the following fields:  
@@ -15,7 +15,7 @@ Nothing needs to be done on this page, the URL for the CloudFormation Stack will
 - **Callback Endpoint** is optional, in the case of an error, the error will be Posted to the given URL
 - **Notification Receiver** Email Address is the email that will be messaged when the Photo DNA scanner find an dangerous content, the email must be verified by your AWS account if your account is still in the 'Sandbox', [visit this page for instructions](https://us-west-2.console.aws.amazon.com/ses/home?region=us-west-2#verified-senders-email ) 
 - **Photo DNA Endpoint** is the subscription-specific endpoint where the scanner will send the images to be analyzed. To find your personal PDNA Endpoint [visit this page](https://testpdnaui.azurewebsites.net/).  
-- **Photo DNA Key** is the subscription-specific key used to identify your subscription. To find your personal PDNA key [visit this page](https://testpdnaui.azurewebsites.net/ ) 
+- **Photo DNA Key** is the subscription-specific key used to identify your subscription. To find your personal PDNA key [visit this page](https://myphotodna.microsoftmoderator.com/) 
 - For **Sender Email** field, the email must be verified by your AWS account, [visit this page for instructions](https://us-west-2.console.aws.amazon.com/ses/home?region=us-west-2#verified-senders-email ) 
 
 **3)**	On Options page, click **Next**

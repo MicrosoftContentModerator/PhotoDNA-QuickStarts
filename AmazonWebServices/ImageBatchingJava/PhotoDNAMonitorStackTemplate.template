@@ -1,21 +1,14 @@
 {
     "AWSTemplateFormatVersion": "2010-09-09",
-    "Parameters": {
-        "S3Bucket": {
-            "Type": "String",
-            "Description": "The name of the bucket that you uploaded the lambda code to. This should be the frist step"
-        },
-        "S3Key": {
-            "Type": "String",
-            "Description": "The key of the s3 object that you uploaded the jar of the code to. This should be the first step before using this template"
-        },
+    "Parameters": {        
         "PhotoDNAEndpoint": {
             "Type": "String",
-            "Description": "The endpoint URL supplied by PhotoDNA for your subscription, find your endpoint here: https://testpdnaui.azurewebsites.net/"
+            "Description": "The endpoint URL supplied by PhotoDNA for your subscription, find your endpoint here: https://myphotodna.microsoftmoderator.com/",
+            "Default" : "https://api.microsoftmoderator.com/photodna/v1.0/MatchEdgeHash"
         },
         "PhotoDNAKey": {
             "Type": "String",
-            "Description": "Your personal PDNA key, you can find your personal Key here: https://testpdnaui.azurewebsites.net/"
+            "Description": "Your personal PDNA key, you can find your personal Key here: https://myphotodna.microsoftmoderator.com/"
         },
         "NotificationReceiverEmailAddress": {
             "Type": "String",
@@ -139,12 +132,8 @@
                     }
                 },
                 "Code": {
-                    "S3Bucket": {
-                        "Ref": "S3Bucket"
-                    },
-                    "S3Key": {
-                        "Ref": "S3Key"
-                    }
+                    "S3Bucket": "pdnaquickstarttemplates",
+                    "S3Key": "javaEdgeHashFunc.zip"
                 },
                 "Role": {
                     "Fn::GetAtt": [
