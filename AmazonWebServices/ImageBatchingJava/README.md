@@ -4,7 +4,7 @@
 This document will guide you through the steps to set up Photo DNA Monitoring for your own existing S3 buckets.
 Before you start, visit [the Photo DNA home page](https://myphotodna.microsoftmoderator.com/) and create a subscription.
 
-**1)**Click ![https://console.aws.amazon.com/cloudformation/home?region=us-west-2#/stacks/new?stackName=PhotoDNAEdgeMonitorStackTempalte&templateURL=https://s3-us-west-2.amazonaws.com/pdnaquickstarttemplates/PhotoDNAMonitorStackTemplate.template](https://dmhnzl5mp9mj6.cloudfront.net/application-management_awsblog/images/cloudformation-launch-stack.png) to be navigated to your AWS accounts CloudFormation page using our CloudFormation Template. You will be navigate automatically to this page once you have logged in:
+**1)** Click ![https://console.aws.amazon.com/cloudformation/home?region=us-west-2#/stacks/new?stackName=PhotoDNAEdgeMonitorStackTempalte&templateURL=https://s3-us-west-2.amazonaws.com/pdnaquickstarttemplates/PhotoDNAMonitorStackTemplate.template](https://github.com/MicrosoftContentModerator/PhotoDNA-QuickStarts/blob/dev/AmazonWebServices/ImageBatchingJava/images/cloudformation-launch-stack.png?raw=true) to be navigated to your AWS accounts CloudFormation page using our CloudFormation Template. You will be navigate automatically to this page once you have logged in:
 ![](PhotoDNA-QuickStarts/AmazonWebServices/ImageBatchingJava/images/templateLanding.png)
 Nothing needs to be done on this page, the URL for the CloudFormation Stack will be automatically populated into the appropriate field. Click **Next** to continue
 
